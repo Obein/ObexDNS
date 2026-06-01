@@ -1,5 +1,5 @@
-export function generateMobileConfig(profileId: string, profileName: string, origin: string): string {
-  const dohUrl = `${origin}/${profileId}`;
+export function generateMobileConfig(profileKey: string, profileName: string, origin: string): string {
+  const dohUrl = `${origin}/${profileKey}`;
   const payloadUUID = crypto.randomUUID();
   const profileUUID = crypto.randomUUID();
   

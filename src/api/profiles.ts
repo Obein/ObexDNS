@@ -165,8 +165,8 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
 
     // 子资源路由: /api/profiles/:id/mobileconfig
     if (pathParts[3] === 'mobileconfig' && request.method === 'GET') {
-      const config = generateMobileConfig(profileId, profile.name, url.origin);
-      return new Response(config, { headers: { 'Content-Type': 'application/x-apple-aspen-config', 'Content-Disposition': `attachment; filename="obex-${profileId}.mobileconfig"` } });
+      const config = generateMobileConfig(profile.profile_key || '', profile.name, url.origin);
+      return new Response(config, { headers: { 'Content-Type': 'application/x-apple-aspen-config', 'Content-Disposition': `attachment; filename="obex-${profile.profile_key}.mobileconfig"` } });
     }
 
     // 子资源路由: /api/profiles/:id/analytics
