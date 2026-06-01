@@ -532,7 +532,9 @@ const MainLayout = ({
             >
               <Icon icon="caret-left" />
               <span className="truncate max-w-30 md:max-w-none">
-                {isProfileActive
+                {location.pathname === "/account"
+                  ? t("common.account")
+                  : isProfileActive
                   ? selectedProfile?.name || t("common.loading")
                   : t("common.selectProfile")}
               </span>
