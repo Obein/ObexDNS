@@ -52,20 +52,8 @@ export const pipelineFilter = {
 
     // 外部列表过滤 (精确匹配)
     if (bloom) {
-      const cache = (caches as any).default;
-      const verdictCacheKey = `verdict_v3:${context.profileId}:${domainLower}`;
-      
-      // 检查 L2 缓存 (Verdict)
-      const cachedVerdict = await cacheUtils.get<string>(cache, verdictCacheKey);
-      if (cachedVerdict === 'BLOCK') {
-        track('verdict_cache_hit');
-        return pipelineResolver.block(request, query, context, settings, "BLOCK", `External List: ${domainLower} (Cached)`);
-      }
-
       if (bloom.test(domainLower)) {
         track('bloom_check');
-        // 直接信任高精度布隆过滤器
-        context.ctx.waitUntil(cacheUtils.set(cache, verdictCacheKey, 'BLOCK', 3600));
         return pipelineResolver.block(request, query, context, settings, "BLOCK", `External List: ${domainLower}`);
       }
       track('bloom_check');
