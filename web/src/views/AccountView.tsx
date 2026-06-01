@@ -655,7 +655,7 @@ export const AccountView: React.FC = () => {
                 minimal 
                 small 
                 icon={<ShieldCheck size={14} className={useTotpForPw ? "text-blue-500" : "text-gray-400"} />}
-                text={useTotpForPw ? t("account.totp.usePasswordInstead", "Use Password Instead") : t("account.totp.useTotpInstead", "Use 2FA Instead")}
+                text={useTotpForPw ? t("account.totp.usePasswordInstead", "Use Password Instead") : t("account.totp.useTotpInstead", "Use TOTP Instead")}
                 onClick={() => {
                   setUseTotpForPw(!useTotpForPw);
                   setPwMessage(null);

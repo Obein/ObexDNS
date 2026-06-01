@@ -115,6 +115,15 @@ export class ProfileModel {
     return result.success;
   }
 
+  async updateRule(id: number, profileId: string, rule: Partial<Rule>): Promise<boolean> {
+    const result = await this.db.prepare(
+      "UPDATE rules SET type = ?, pattern = ?, v_a = ?, v_aaaa = ?, v_txt = ?, v_cname = ? WHERE id = ? AND profile_id = ?"
+    )
+      .bind(rule.type, rule.pattern, rule.v_a || null, rule.v_aaaa || null, rule.v_txt || null, rule.v_cname || null, id, profileId)
+      .run();
+    return result.success;
+  }
+
   async deleteRule(id: number, profileId: string): Promise<boolean> {
     const result = await this.db.prepare("DELETE FROM rules WHERE id = ? AND profile_id = ?").bind(id, profileId).run();
     return result.success;

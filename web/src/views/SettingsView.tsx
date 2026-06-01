@@ -249,7 +249,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const rotateProfileKey = async () => {
-    if (!window.confirm(t("settings.rotateKeyWarning", "This will generate a new connection URL. Existing devices using the old URL will immediately lose connection. Are you sure you want to continue?"))) {
+    if (!window.confirm(t("settings.rotateKeyWarning", "This will generate a new access URL. Existing devices using the old URL will immediately lose connection. Are you sure you want to continue?"))) {
       return;
     }
     setRotatingKey(true);
@@ -259,7 +259,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         const data = await res.json();
         setProfile((prev) => (prev ? { ...prev, profile_key: data.profile_key } : null));
         toasterRef?.current?.show({
-          message: t("settings.rotateKeySuccess", "Profile connection URL rotated successfully."),
+          message: t("settings.rotateKeySuccess", "Profile access URL rotated successfully."),
           intent: Intent.SUCCESS,
           icon: "tick",
         });
@@ -268,7 +268,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       }
     } catch (e) {
       toasterRef?.current?.show({
-        message: t("settings.rotateKeyError", "Failed to rotate connection URL."),
+        message: t("settings.rotateKeyError", "Failed to rotate access URL."),
         intent: Intent.DANGER,
         icon: "error",
       });
@@ -675,10 +675,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {t("settings.securityTitle", "Security & Access")}
         </H5>
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-          <div>
-            <div className="font-bold">{t("settings.rotateKeyTitle", "Rotate Connection URL")}</div>
-            <p className="text-xs opacity-60 max-w-xl">
-              {t("settings.rotateKeyDesc", "Generate a new connection URL for this profile. Any devices currently using the old URL will immediately lose their connection to Obex DNS and will need to be reconfigured with the new URL.")}
+          <div className="flex-1 max-w-2xl">
+            <div className="font-bold mb-2">{t("settings.rotateKeyTitle", "Access URL")}</div>
+            <InputGroup
+              readOnly
+              value={`${window.location.origin}/${profile?.profile_key || profileId}`}
+              className="mb-2 font-mono text-sm"
+              rightElement={
+                <Button 
+                  icon="duplicate" 
+                  minimal 
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/${profile?.profile_key || profileId}`);
+                    toasterRef?.current?.show({ message: t("settings.copied", "Copied to clipboard"), intent: Intent.SUCCESS });
+                  }} 
+                />
+              }
+            />
+            <p className="text-xs opacity-60">
+              {t("settings.rotateKeyDesc", "Generate a new access URL for this profile. Any devices currently using the old URL will immediately lose their connection to Obex DNS and will need to be reconfigured with the new URL.")}
             </p>
           </div>
           <Button

@@ -72,6 +72,8 @@ export const RulesView: React.FC<RulesViewProps> = ({
     v_cname: "",
   });
 
+  const [editingId, setEditingId] = useState<number | null>(null);
+
   useEffect(() => {
     if (prefill) {
       setNewRule({
@@ -121,12 +123,16 @@ export const RulesView: React.FC<RulesViewProps> = ({
     }
   };
 
-  const addRule = async () => {
+  const addOrUpdateRule = async () => {
     if (!newRule.pattern) return;
+    const isUpdate = editingId !== null;
+    const method = isUpdate ? "PUT" : "POST";
+    const payload = isUpdate ? { ...newRule, id: editingId } : newRule;
+
     await fetch(`/api/profiles/${profileId}/rules`, {
-      method: "POST",
+      method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newRule),
+      body: JSON.stringify(payload),
     });
     setNewRule({
       type: "BLOCK",
@@ -136,7 +142,33 @@ export const RulesView: React.FC<RulesViewProps> = ({
       v_txt: "",
       v_cname: "",
     });
+    setEditingId(null);
     fetchRules();
+  };
+
+  const cancelEdit = () => {
+    setNewRule({
+      type: "BLOCK",
+      pattern: "",
+      v_a: "",
+      v_aaaa: "",
+      v_txt: "",
+      v_cname: "",
+    });
+    setEditingId(null);
+  };
+
+  const startEdit = (rule: Rule) => {
+    setNewRule({
+      type: rule.type,
+      pattern: rule.pattern,
+      v_a: rule.v_a || "",
+      v_aaaa: rule.v_aaaa || "",
+      v_txt: rule.v_txt || "",
+      v_cname: rule.v_cname || "",
+    });
+    setEditingId(rule.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const deleteRule = async (id: number) => {
@@ -195,14 +227,24 @@ export const RulesView: React.FC<RulesViewProps> = ({
             </div>
             {newRule.type !== "REDIRECT" && (
               <FormGroup label="" labelFor="">
-                <Button
-                  intent={Intent.PRIMARY}
-                  size="large"
-                  icon={<Plus size={18} />}
-                  onClick={addRule}
-                >
-                  {t("rules.addRule")}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    intent={editingId ? Intent.SUCCESS : Intent.PRIMARY}
+                    size="large"
+                    icon={editingId ? "saved" : <Plus size={18} />}
+                    onClick={addOrUpdateRule}
+                  >
+                    {editingId ? t("rules.saveChanges", "Save") : t("rules.addRule")}
+                  </Button>
+                  {editingId && (
+                    <Button
+                      size="large"
+                      onClick={cancelEdit}
+                    >
+                      {t("rules.cancel", "Cancel")}
+                    </Button>
+                  )}
+                </div>
               </FormGroup>
             )}
           </div>
@@ -270,13 +312,20 @@ export const RulesView: React.FC<RulesViewProps> = ({
                 </FormGroup>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+                {editingId && (
+                  <Button
+                    large
+                    onClick={cancelEdit}
+                    text={t("rules.cancel", "Cancel")}
+                  />
+                )}
                 <Button
-                  intent={Intent.PRIMARY}
+                  intent={editingId ? Intent.SUCCESS : Intent.PRIMARY}
                   large
-                  icon={<Plus size={18} />}
-                  onClick={addRule}
-                  text={t("rules.saveRedirectRule")}
+                  icon={editingId ? "saved" : <Plus size={18} />}
+                  onClick={addOrUpdateRule}
+                  text={editingId ? t("rules.saveChanges", "Save Changes") : t("rules.saveRedirectRule")}
                 />
               </div>
             </div>
@@ -376,6 +425,12 @@ export const RulesView: React.FC<RulesViewProps> = ({
                     )}
                   </td>
                   <td className="text-right">
+                    <Button
+                      icon="edit"
+                      minimal
+                      className="mr-1"
+                      onClick={() => startEdit(rule)}
+                    />
                     <Button
                       icon={<Trash2 size={14} />}
                       minimal
