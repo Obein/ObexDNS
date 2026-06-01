@@ -99,7 +99,11 @@ export default {
 
       // DoH 解析路由: /<6到12位字符串>
       const profileKeyMatch = url.pathname.match(/^\/([a-zA-Z0-9]{6,12})$/);
-      if (profileKeyMatch) {
+      const isDoHRequest = request.method === 'POST' || 
+                           url.searchParams.has('dns') || 
+                           request.headers.get('accept')?.includes('dns-message');
+                           
+      if (profileKeyMatch && isDoHRequest) {
         try {
           const profileKey = profileKeyMatch[1];
           const profileModel = new ProfileModel(env.DB);
