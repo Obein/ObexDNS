@@ -30,10 +30,13 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  Terminal,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { clsx } from "clsx";
 import { getPresetRegions, type RegionConfigItem } from "../config/regions";
+import { generateMobileConfig } from "../utils/mobileconfig";
+import { generateLinuxScript } from "../utils/unixScript";
 
 interface SetupViewProps {
   profileId: string;
@@ -423,9 +426,16 @@ export const SetupView: React.FC<SetupViewProps> = ({
                   intent={Intent.PRIMARY}
                   text={t("setup.downloadConfig")}
                   icon="download"
-                  onClick={() =>
-                    (window.location.href = `/api/profiles/${profileId}/mobileconfig`)
-                  }
+                  onClick={() => {
+                    const xml = generateMobileConfig(profileKey, "Obex", window.location.origin);
+                    const blob = new Blob([xml], { type: "application/x-apple-aspen-config" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `obex-${profileKey}.mobileconfig`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
                 />
               </div>
               <p className="text-[10px] opacity-50 mt-4! text-center">
@@ -483,6 +493,42 @@ export const SetupView: React.FC<SetupViewProps> = ({
                 <li>{t("setup.windowsStep3")}</li>
                 <li>{t("setup.windowsStep4")}</li>
               </ol>
+            </div>
+          }
+        />
+
+        <Tab
+          id="linux"
+          title={
+            <span>
+              <Terminal size={16} className="inline mr-2" />
+              {t("setup.linux")}
+            </span>
+          }
+          panel={
+            <div className="space-y-4 md:ml-4 mt-4 md:mt-0">
+              <H5 className="font-bold">{t("setup.linuxTitle")}</H5>
+              <p className="text-sm">{t("setup.linuxDesc")}</p>
+              
+              <div className="mt-4">
+                <p className="text-sm font-bold mb-2">{t("setup.linuxStep1")}</p>
+                <div className="relative group">
+                  <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto text-xs font-mono border border-gray-200 dark:border-gray-700">
+                    <code>{generateLinuxScript(dohUrl)}</code>
+                  </pre>
+                  <Button
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    icon="duplicate"
+                    onClick={() => {
+                      copyToClipboard(generateLinuxScript(dohUrl));
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <p className="text-sm font-bold">{t("setup.linuxStep2")}</p>
+              </div>
             </div>
           }
         />
