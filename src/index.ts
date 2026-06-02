@@ -65,6 +65,7 @@ export default {
           asn: cf?.asn || 0,
           asOrganization: cf?.asOrganization || "UNKNOWN",
           connectedProfileId: connectedProfileId || null,
+          substituteDomain: env.SUBSTITUTE_DOMAIN || "pages.dev",
           regions
         }), { headers: { 'Content-Type': 'application/json' } });
       }

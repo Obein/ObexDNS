@@ -51,6 +51,7 @@ interface DebugInfo {
   asOrganization: string;
   connectedProfileId?: string;
   regions?: Record<string, RegionConfigItem>;
+  substituteDomain?: string;
 }
 
 // 移动端适配 Hook
@@ -107,16 +108,16 @@ export const SetupView: React.FC<SetupViewProps> = ({
     });
   };
 
-  const resolvePagesDev = async () => {
+  const resolveSubstituteDomain = async (domain: string) => {
     try {
       const res = await fetch(
-        "https://cloudflare-dns.com/dns-query?name=pages.dev&type=A",
+        `https://cloudflare-dns.com/dns-query?name=${domain}&type=A`,
         {
           headers: { Accept: "application/dns-json" },
         },
       );
       const res6 = await fetch(
-        "https://cloudflare-dns.com/dns-query?name=pages.dev&type=AAAA",
+        `https://cloudflare-dns.com/dns-query?name=${domain}&type=AAAA`,
         {
           headers: { Accept: "application/dns-json" },
         },
@@ -130,7 +131,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
         setPagesDevIpv6(data6.Answer[0].data);
       }
     } catch (e) {
-      console.error("Failed to resolve pages.dev", e);
+      console.error(`Failed to resolve ${domain}`, e);
     }
   };
 
@@ -141,6 +142,9 @@ export const SetupView: React.FC<SetupViewProps> = ({
       const debugRes = await fetch("/api/debug");
       const debugData = await debugRes.json();
       setDebugInfo(debugData);
+
+      const domainToResolve = debugData.substituteDomain || "pages.dev";
+      resolveSubstituteDomain(domainToResolve);
 
       if (debugData.regions) {
         const enriched: Record<string, RegionConfigItem> = {};
@@ -177,7 +181,6 @@ export const SetupView: React.FC<SetupViewProps> = ({
 
   useEffect(() => {
     handleVerify();
-    resolvePagesDev();
   }, []);
 
   const currentIps = useMemo(() => {
