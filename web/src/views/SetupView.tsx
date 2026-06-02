@@ -111,13 +111,13 @@ export const SetupView: React.FC<SetupViewProps> = ({
   const resolveSubstituteDomain = async (domain: string) => {
     try {
       const res = await fetch(
-        `https://cloudflare-dns.com/dns-query?name=${domain}&type=A`,
+        `https://1.1.1.1/dns-query?name=${domain}&type=A`,
         {
           headers: { Accept: "application/dns-json" },
         },
       );
       const res6 = await fetch(
-        `https://cloudflare-dns.com/dns-query?name=${domain}&type=AAAA`,
+        `https://1.1.1.1/dns-query?name=${domain}&type=AAAA`,
         {
           headers: { Accept: "application/dns-json" },
         },
