@@ -335,6 +335,8 @@
     "createUser": "创建用户",
     "role": "角色",
     "createdAt": "创建时间",
+    "lastActive": "最后活动时间",
+    "lastResolve": "最后解析时间",
     "actions": "操作",
     "dangerZone": "危险区域",
     "clearLogs": "清空所有日志",

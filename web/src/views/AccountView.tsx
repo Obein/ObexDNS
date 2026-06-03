@@ -32,6 +32,8 @@ export interface UserInfo {
   created_at?: number;
   totp_enabled?: boolean;
   totp_skip_password?: boolean;
+  last_active_at?: number;
+  last_resolve_at?: number;
 }
 
 interface ActivityEntry {
@@ -709,7 +711,15 @@ export const AccountView: React.FC = () => {
             <Card elevation={Elevation.ONE} className="p-0 overflow-hidden overflow-x-auto">
               <HTMLTable interactive striped className="w-full">
                 <thead>
-                  <tr><th>{t("account.username")}</th><th>{t("account.role")}</th><th>ID</th><th>{t("account.createdAt")}</th><th className="text-right">{t("account.actions")}</th></tr>
+                  <tr>
+                    <th>{t("account.username")}</th>
+                    <th>{t("account.role")}</th>
+                    <th>ID</th>
+                    <th>{t("account.createdAt")}</th>
+                    <th>{t("account.lastActive")}</th>
+                    <th>{t("account.lastResolve")}</th>
+                    <th className="text-right">{t("account.actions")}</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {users.map(u => (
@@ -718,6 +728,8 @@ export const AccountView: React.FC = () => {
                       <td><Tag minimal intent={u.role === 'admin' ? Intent.DANGER : Intent.NONE}>{u.role === 'admin' ? t("account.roleAdmin") : t("account.roleUser")}</Tag></td>
                       <td><code className="text-xs">{u.id}</code></td>
                       <td className="text-xs text-gray-500">{u.created_at ? formatDateTime(new Date(u.created_at * 1000)) : '-'}</td>
+                      <td className="text-xs text-gray-500">{u.last_active_at ? formatDateTime(new Date(u.last_active_at * 1000)) : '-'}</td>
+                      <td className="text-xs text-gray-500">{u.last_resolve_at ? formatDateTime(new Date(u.last_resolve_at * 1000)) : '-'}</td>
                       <td className="text-right"><Button minimal intent={Intent.DANGER} icon={<Trash2 size={14} />} disabled={u.id === me.id} onClick={() => handleDeleteUser(u.id)} /></td>
                     </tr>
                   ))}

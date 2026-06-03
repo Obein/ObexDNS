@@ -14,6 +14,9 @@ export interface User {
   hashed_password?: string;
   totp_enabled?: number;       // 0 | 1
   totp_skip_password?: number; // 0 | 1 — when 1, login skips password check
+  created_at?: number;
+  last_active_at?: number;
+  last_resolve_at?: number;
 }
 
 export interface UserActivityLog {

@@ -335,6 +335,8 @@
     "createUser": "Create User",
     "role": "Role",
     "createdAt": "Created At",
+    "lastActive": "Last Active",
+    "lastResolve": "Last Resolve",
     "actions": "Actions",
     "dangerZone": "Danger Zone",
     "clearLogs": "Clear All Logs",

@@ -13,7 +13,19 @@ export class UserModel {
   }
 
   async listAll(): Promise<User[]> {
-    const { results } = await this.db.prepare("SELECT id, username, role, created_at FROM users ORDER BY created_at DESC").all<User>();
+    const { results } = await this.db.prepare(`
+      SELECT 
+        u.id, 
+        u.username, 
+        u.role, 
+        u.created_at, 
+        u.last_active_at,
+        MAX(p.last_active_at) as last_resolve_at
+      FROM users u
+      LEFT JOIN profiles p ON p.owner_id = u.id
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
+    `).all<User>();
     return results;
   }
 
