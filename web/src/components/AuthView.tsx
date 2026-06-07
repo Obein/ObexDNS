@@ -364,7 +364,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
               <FormGroup label={t("auth.username")} labelFor="username">
                 <Tooltip
                   content={t("auth.formatTipUsername")}
-                  isOpen={usernameFocused}
+                  isOpen={usernameFocused && !isLogin}
+                  disabled={isLogin}
                   position={Position.TOP}
                   intent={Intent.PRIMARY}
                   className="w-full"
