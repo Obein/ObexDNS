@@ -1,5 +1,5 @@
 import React from "react";
-import { HTMLTable, Tag, Button, Intent } from "@blueprintjs/core";
+import { HTMLTable, Tag, Intent } from "@blueprintjs/core";
 import { ShieldX, CheckCircle, ArrowRightLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {  Rule  } from "../types";
