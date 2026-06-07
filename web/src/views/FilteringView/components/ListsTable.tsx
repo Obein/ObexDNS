@@ -1,5 +1,5 @@
 import React from "react";
-import { HTMLTable, Tag, Button, Intent } from "@blueprintjs/core";
+import { HTMLTable, Tag, Intent } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 import { formatDateTime } from "../../../utils/date";
 import type {  FilterList  } from "../types";
