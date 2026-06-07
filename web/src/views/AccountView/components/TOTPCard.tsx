@@ -80,7 +80,7 @@ export const TOTPCard: React.FC<TOTPCardProps> = ({ user, onRefresh }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           secret: setupData.secret,
-          token: hashHex,
+          totpTokenHash: hashHex,
           salt: salt,
         }),
       });
