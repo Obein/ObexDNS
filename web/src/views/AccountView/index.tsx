@@ -89,7 +89,7 @@ export const AccountView: React.FC = () => {
       return;
     }
     if (!/^[a-zA-Z0-9]{5,15}$/.test(editUsername)) {
-      alert(t("account.formatErrorUsername"));
+      alert(t("account.formatTipUsername"));
       return;
     }
     setUsernameLoading(true);
@@ -115,7 +115,7 @@ export const AccountView: React.FC = () => {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(newPassword)) {
-      setPwMessage({ text: t("account.formatErrorPassword"), intent: Intent.DANGER });
+      setPwMessage({ text: t("account.formatTipPassword"), intent: Intent.DANGER });
       return;
     }
     setPwLoading(true);
@@ -196,19 +196,22 @@ export const AccountView: React.FC = () => {
                 {isEditingUsername ? (
                   <>
                     <Tooltip
-                      content={t("account.formatErrorUsername")}
+                      content={t("account.formatTipUsername")}
                       isOpen={usernameFocused}
                       position={Position.TOP}
                       intent={Intent.PRIMARY}
+                      className="w-full"
                     >
-                      <InputGroup
-                        fill
-                        value={editUsername}
-                        onChange={(e) => setEditUsername(e.target.value)}
-                        onFocus={() => setUsernameFocused(true)}
-                        onBlur={() => setUsernameFocused(false)}
-                        autoFocus
-                      />
+                      <div className="w-full block">
+                        <InputGroup
+                          fill
+                          value={editUsername}
+                          onChange={(e) => setEditUsername(e.target.value)}
+                          onFocus={() => setUsernameFocused(true)}
+                          onBlur={() => setUsernameFocused(false)}
+                          autoFocus
+                        />
+                      </div>
                     </Tooltip>
                     <ButtonGroup>
                       <Button
@@ -296,20 +299,23 @@ export const AccountView: React.FC = () => {
             )}
             <FormGroup label={t("account.newPassword")}>
               <Tooltip
-                content={t("account.formatErrorPassword")}
+                content={t("account.formatTipPassword")}
                 isOpen={newPasswordFocused}
                 position={Position.TOP}
                 intent={Intent.PRIMARY}
+                className="w-full"
               >
-                <InputGroup
-                  leftIcon="lock"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  onFocus={() => setNewPasswordFocused(true)}
-                  onBlur={() => setNewPasswordFocused(false)}
-                  required
-                />
+                <div className="w-full block">
+                  <InputGroup
+                    leftIcon="lock"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    onFocus={() => setNewPasswordFocused(true)}
+                    onBlur={() => setNewPasswordFocused(false)}
+                    required
+                  />
+                </div>
               </Tooltip>
             </FormGroup>
             <Button fill intent={Intent.WARNING} type="submit" loading={pwLoading} text={t("account.updatePassword")} />
