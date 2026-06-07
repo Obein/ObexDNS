@@ -11,6 +11,8 @@ import {
   Callout,
   ButtonGroup,
   Divider,
+  Tooltip,
+  Position,
 } from "@blueprintjs/core";
 import { User, ShieldCheck, Key, Edit2, Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -32,9 +34,11 @@ export const AccountView: React.FC = () => {
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [editUsername, setEditUsername] = useState("");
   const [usernameLoading, setUsernameLoading] = useState(false);
+  const [usernameFocused, setUsernameFocused] = useState(false);
 
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [newPasswordFocused, setNewPasswordFocused] = useState(false);
   const [useTotpForPw, setUseTotpForPw] = useState(false);
   const [totpToken, setTotpToken] = useState("");
   const [pwLoading, setPwLoading] = useState(false);
@@ -191,12 +195,21 @@ export const AccountView: React.FC = () => {
               <div className="flex gap-2">
                 {isEditingUsername ? (
                   <>
-                    <InputGroup
-                      fill
-                      value={editUsername}
-                      onChange={(e) => setEditUsername(e.target.value)}
-                      autoFocus
-                    />
+                    <Tooltip
+                      content={t("account.formatErrorUsername")}
+                      isOpen={usernameFocused}
+                      position={Position.TOP}
+                      intent={Intent.PRIMARY}
+                    >
+                      <InputGroup
+                        fill
+                        value={editUsername}
+                        onChange={(e) => setEditUsername(e.target.value)}
+                        onFocus={() => setUsernameFocused(true)}
+                        onBlur={() => setUsernameFocused(false)}
+                        autoFocus
+                      />
+                    </Tooltip>
                     <ButtonGroup>
                       <Button
                         icon={<Check size={16} />}
@@ -282,13 +295,22 @@ export const AccountView: React.FC = () => {
               </FormGroup>
             )}
             <FormGroup label={t("account.newPassword")}>
-              <InputGroup
-                leftIcon="lock"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
+              <Tooltip
+                content={t("account.formatErrorPassword")}
+                isOpen={newPasswordFocused}
+                position={Position.TOP}
+                intent={Intent.PRIMARY}
+              >
+                <InputGroup
+                  leftIcon="lock"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  onFocus={() => setNewPasswordFocused(true)}
+                  onBlur={() => setNewPasswordFocused(false)}
+                  required
+                />
+              </Tooltip>
             </FormGroup>
             <Button fill intent={Intent.WARNING} type="submit" loading={pwLoading} text={t("account.updatePassword")} />
           </form>

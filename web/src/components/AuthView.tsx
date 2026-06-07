@@ -7,7 +7,9 @@ import {
   InputGroup,
   H3,
   Intent,
-  Callout
+  Callout,
+  Tooltip,
+  Position
 } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 import {
@@ -137,6 +139,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isPanelVisible, setIsPanelVisible] = useState(true);
+  
+  const [usernameFocused, setUsernameFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   
   const { t } = useTranslation();
 
@@ -357,12 +362,26 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
           {(loginStep === 1 || !isLogin) && (
             <form onSubmit={isLogin ? handleStep1Submit : handleSignupSubmit} className="space-y-4">
               <FormGroup label={t("auth.username")} labelFor="username">
-                <InputGroup id="username" leftIcon="user" placeholder={t("auth.usernamePlaceholder")} size="large" className="rounded-xl" value={username} onChange={(e) => setUsername(e.target.value)} required />
+                <Tooltip
+                  content={t("auth.formatErrorUsername")}
+                  isOpen={usernameFocused}
+                  position={Position.TOP}
+                  intent={Intent.PRIMARY}
+                >
+                  <InputGroup id="username" leftIcon="user" placeholder={t("auth.usernamePlaceholder")} size="large" className="rounded-xl w-full" value={username} onChange={(e) => setUsername(e.target.value)} onFocus={() => setUsernameFocused(true)} onBlur={() => setUsernameFocused(false)} required />
+                </Tooltip>
               </FormGroup>
 
               {!isLogin && (
                 <FormGroup label={t("auth.password")} labelFor="password">
-                  <InputGroup id="password" leftIcon="lock" placeholder={t("auth.passwordPlaceholder")} type="password" size="large" className="rounded-xl" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <Tooltip
+                    content={t("auth.formatErrorPassword")}
+                    isOpen={passwordFocused}
+                    position={Position.TOP}
+                    intent={Intent.PRIMARY}
+                  >
+                    <InputGroup id="password" leftIcon="lock" placeholder={t("auth.passwordPlaceholder")} type="password" size="large" className="rounded-xl w-full" value={password} onChange={(e) => setPassword(e.target.value)} onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)} required />
+                  </Tooltip>
                 </FormGroup>
               )}
 
