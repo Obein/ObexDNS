@@ -3,6 +3,7 @@ import { parseList } from "./parser";
 import { BloomFilter } from "./bloom";
 import { pipelineCache } from "../pipeline/cache";
 import { ProfileModel } from "../models/profile";
+import { isSafeUrl } from "./validator";
 
 /**
  * 同步并更新 Profile 关联的规则列表，生成布隆过滤器。
@@ -32,10 +33,47 @@ export async function syncProfileLists(profileId: string, env: Env, ctx: Executi
     for (const list of lists) {
       let success = false;
       try {
+        if (!isSafeUrl(list.url)) {
+          console.error(`[Sync] Blocked unsafe URL: ${list.url}`);
+          continue;
+        }
         const syncTimeoutMs = Number(env.SYNC_TIMEOUT_MS) || 30000;
         const response = await fetch(list.url, { signal: AbortSignal.timeout(syncTimeoutMs) });
         if (response.ok) {
-          const domains = parseList(await response.text());
+          const contentLength = response.headers.get('content-length');
+          const MAX_BYTES = 20 * 1024 * 1024; // 20 MB limit
+          if (contentLength && parseInt(contentLength, 10) > MAX_BYTES) {
+            console.error(`[Sync] List too large, blocking: ${list.url}`);
+            continue;
+          }
+
+          const reader = response.body?.getReader();
+          if (!reader) continue;
+
+          let totalBytes = 0;
+          const chunks: Uint8Array[] = [];
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+              totalBytes += value.length;
+              if (totalBytes > MAX_BYTES) {
+                throw new Error(`[Sync] Content exceeded maximum size of ${MAX_BYTES} bytes`);
+              }
+              chunks.push(value);
+            }
+          }
+
+          const concatenated = new Uint8Array(totalBytes);
+          let offset = 0;
+          for (const chunk of chunks) {
+            concatenated.set(chunk, offset);
+            offset += chunk.length;
+          }
+          const textContent = new TextDecoder().decode(concatenated);
+
+          const domains = parseList(textContent);
           if (domains.length > 0) {
             domains.forEach(d => allDomains.add(d));
             success = true;

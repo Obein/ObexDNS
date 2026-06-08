@@ -157,7 +157,7 @@ export default {
           });
         } catch (e: any) {
           console.error(`[DoH Pipeline] Internal Error:`, e);
-          return new Response(`Internal Server Error: ${e.message}`, { status: 500 });
+          return new Response(`Internal Server Error`, { status: 500 });
         }
       }
 
