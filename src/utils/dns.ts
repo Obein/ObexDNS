@@ -309,58 +309,204 @@ export function buildResponse(queryRaw: Uint8Array, type: string, value: string,
       return res;
     }
 
-    // 准备 Answer 内容
-    let data: number[] = [];
-    if (type === 'A') {
-      data = value.split('.').map(v => parseInt(v) || 0);
-    } else if (type === 'AAAA') {
-        // 正确解析 IPv6 地址，包括压缩形式
-        const bytes = new Uint8Array(16).fill(0);
-        if (value.includes('::')) {
-            const [left, right] = value.split('::');
-            const leftParts = left.split(':').filter(p => p);
-            const rightParts = right.split(':').filter(p => p);
-            
-            let i = 0;
-            for (const part of leftParts) {
-                const v = parseInt(part, 16);
-                bytes[i++] = (v >> 8) & 0xff;
-                bytes[i++] = v & 0xff;
-            }
-            
-            i = 16 - rightParts.length * 2;
-            for (const part of rightParts) {
-                const v = parseInt(part, 16);
-                bytes[i++] = (v >> 8) & 0xff;
-                bytes[i++] = v & 0xff;
-            }
-        } else {
-            const parts = value.split(':');
-            let i = 0;
-            for (const part of parts) {
-                const v = parseInt(part, 16);
-                bytes[i++] = (v >> 8) & 0xff;
-                bytes[i++] = v & 0xff;
-            }
-        }
-        data = Array.from(bytes);
-    } else if (type === 'CNAME') {
-      const labels = value.split('.');
-      for (const label of labels) {
-        data.push(label.length);
-        for (let i = 0; i < label.length; i++) data.push(label.charCodeAt(i));
+export interface DNSRecord {
+  name?: string; // If omitted, uses pointer to original query
+  type: string;
+  value: string;
+  ttl?: number;
+}
+
+function encodeRData(type: string, value: string): number[] {
+  let data: number[] = [];
+  if (type === 'A') {
+    data = value.split('.').map(v => parseInt(v) || 0);
+  } else if (type === 'AAAA') {
+    const bytes = new Uint8Array(16).fill(0);
+    if (value.includes('::')) {
+      const [left, right] = value.split('::');
+      const leftParts = left.split(':').filter(p => p);
+      const rightParts = right.split(':').filter(p => p);
+      
+      let i = 0;
+      for (const part of leftParts) {
+        const v = parseInt(part, 16);
+        bytes[i++] = (v >> 8) & 0xff;
+        bytes[i++] = v & 0xff;
       }
-      data.push(0);
-    } else if (type === 'TXT') {
-      // 将值分割成多个255字节的块
-      for (let i = 0; i < value.length; i += 255) {
-          const chunk = value.substring(i, i + 255);
-          data.push(chunk.length);
-          for (let j = 0; j < chunk.length; j++) {
-              data.push(chunk.charCodeAt(j));
-          }
+      
+      i = 16 - rightParts.length * 2;
+      for (const part of rightParts) {
+        const v = parseInt(part, 16);
+        bytes[i++] = (v >> 8) & 0xff;
+        bytes[i++] = v & 0xff;
+      }
+    } else {
+      const parts = value.split(':');
+      let i = 0;
+      for (const part of parts) {
+        const v = parseInt(part, 16);
+        bytes[i++] = (v >> 8) & 0xff;
+        bytes[i++] = v & 0xff;
       }
     }
+    data = Array.from(bytes);
+  } else if (type === 'CNAME') {
+    const labels = value.split('.');
+    for (const label of labels) {
+      data.push(label.length);
+      for (let i = 0; i < label.length; i++) data.push(label.charCodeAt(i));
+    }
+    data.push(0);
+  } else if (type === 'TXT') {
+    for (let i = 0; i < value.length; i += 255) {
+      const chunk = value.substring(i, i + 255);
+      data.push(chunk.length);
+      for (let j = 0; j < chunk.length; j++) {
+        data.push(chunk.charCodeAt(j));
+      }
+    }
+  }
+  return data;
+}
+
+export function buildResponseMulti(queryRaw: Uint8Array, records: DNSRecord[], rcode: number = 0): Uint8Array {
+  try {
+    if (!queryRaw || queryRaw.length < 12) {
+      const err = new Uint8Array(12);
+      err[2] = 0x81; err[3] = 0x82; // Server Failure
+      return err;
+    }
+
+    const header = new Uint8Array(12);
+    header.set(queryRaw.slice(0, 12));
+    header[2] = (header[2] & 0x01) | 0x84; // QR=1, AA=1, 继承 RD
+    header[3] = 0x80 | (rcode & 0x0F);    // RA=1, RCODE
+    
+    let qEnd = 12;
+    const qCount = (queryRaw[4] << 8) | queryRaw[5];
+    for (let i = 0; i < qCount; i++) {
+      const { read } = decodeName(queryRaw, qEnd);
+      if (read === 0 && qEnd < queryRaw.length) {
+        qEnd++;
+      } else {
+        qEnd += read + 4;
+      }
+      if (qEnd > queryRaw.length) { qEnd = queryRaw.length; break; }
+    }
+    const questionSection = queryRaw.slice(12, qEnd);
+    
+    header[4] = (qCount >> 8) & 0xff; header[5] = qCount & 0xff;
+    header[6] = (records.length >> 8) & 0xff; header[7] = records.length & 0xff; // ANCOUNT
+    header[8] = 0; header[9] = 0; // NSCOUNT
+    header[10] = 0; header[11] = 0; // ARCOUNT
+
+    if (records.length === 0) {
+      const res = new Uint8Array(12 + questionSection.length);
+      res.set(header);
+      res.set(questionSection, 12);
+      return res;
+    }
+
+    const answerRRs: Uint8Array[] = [];
+    let totalLength = 12 + questionSection.length;
+    
+    for (const record of records) {
+      const { name, type, value, ttl = 60 } = record;
+      
+      let nameBytes: number[] = [];
+      if (!name) {
+        nameBytes = [0xc0, 0x0c]; // Pointer to the first question
+      } else {
+        const labels = name.split('.');
+        for (const label of labels) {
+          nameBytes.push(label.length);
+          for (let i = 0; i < label.length; i++) nameBytes.push(label.charCodeAt(i));
+        }
+        nameBytes.push(0);
+      }
+      
+      const data = encodeRData(type, value);
+      const rdlength = data.length;
+      
+      const rr = new Uint8Array(nameBytes.length + 10 + rdlength);
+      rr.set(nameBytes, 0);
+      let offset = nameBytes.length;
+      
+      const tCode = DNS_TYPE_TO_CODE[type] || 1;
+      rr[offset++] = (tCode >> 8); rr[offset++] = tCode & 0xff;
+      rr[offset++] = 0; rr[offset++] = 1; // Class IN
+      rr[offset++] = (ttl >> 24) & 0xff; rr[offset++] = (ttl >> 16) & 0xff;
+      rr[offset++] = (ttl >> 8) & 0xff; rr[offset++] = ttl & 0xff;
+      rr[offset++] = (rdlength >> 8) & 0xff; rr[offset++] = rdlength & 0xff;
+      rr.set(data, offset);
+      
+      answerRRs.push(rr);
+      totalLength += rr.length;
+    }
+
+    const res = new Uint8Array(totalLength);
+    res.set(header, 0);
+    res.set(questionSection, 12);
+    
+    let currentOffset = 12 + questionSection.length;
+    for (const rr of answerRRs) {
+      res.set(rr, currentOffset);
+      currentOffset += rr.length;
+    }
+    
+    return res;
+  } catch (e) {
+    console.error("Critical error in buildResponseMulti:", e);
+    const fallback = new Uint8Array(12);
+    fallback.set(queryRaw.slice(0, 12));
+    fallback[2] |= 0x80; fallback[3] = (fallback[3] & 0xF0) | 0x02; // ServFail
+    return fallback;
+  }
+}
+
+export function buildResponse(queryRaw: Uint8Array, type: string, value: string, ttl: number = 60, rcode: number = 0): Uint8Array {
+  try {
+    if (!queryRaw || queryRaw.length < 12) {
+      // 极端情况：包太短，返回一个最简错误包
+      const err = new Uint8Array(12);
+      err[2] = 0x81; err[3] = 0x82; // Server Failure
+      return err;
+    }
+
+    // 准备 Header (12 字节)
+    const header = new Uint8Array(12);
+    header.set(queryRaw.slice(0, 12));
+    header[2] = (header[2] & 0x01) | 0x84; // QR=1, AA=1, 继承 RD
+    header[3] = 0x80 | (rcode & 0x0F);    // RA=1, RCODE
+    
+    // 提取 Question Section (紧跟 Header 之后)
+    let qEnd = 12;
+    const qCount = (queryRaw[4] << 8) | queryRaw[5];
+    for (let i = 0; i < qCount; i++) {
+      const { read } = decodeName(queryRaw, qEnd);
+      if (read === 0 && qEnd < queryRaw.length) {
+        qEnd++; // 安全步进
+      } else {
+        qEnd += read + 4;
+      }
+      if (qEnd > queryRaw.length) { qEnd = queryRaw.length; break; }
+    }
+    const questionSection = queryRaw.slice(12, qEnd);
+    
+    header[4] = (qCount >> 8) & 0xff; header[5] = qCount & 0xff; // 保持原始问题数
+    header[6] = 0; header[7] = value ? 1 : 0; // ANCOUNT
+    header[8] = 0; header[9] = 0;             // NSCOUNT
+    header[10] = 0; header[11] = 0;           // ARCOUNT (丢弃额外的附加记录)
+
+    if (!value) {
+      const res = new Uint8Array(12 + questionSection.length);
+      res.set(header);
+      res.set(questionSection, 12);
+      return res;
+    }
+
+    // 准备 Answer 内容
+    const data = encodeRData(type, value);
 
     // 构建 Answer Resource Record (RR)
     // RR 结构: NAME(2) + TYPE(2) + CLASS(2) + TTL(4) + RDLENGTH(2) + RDATA(variable)
