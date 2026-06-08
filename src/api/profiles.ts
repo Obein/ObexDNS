@@ -6,6 +6,7 @@ import { syncProfileLists } from "../utils/sync";
 import { LogModel } from "../models/log";
 import { ProfileModel } from "../models/profile";
 import { generateId } from "../lib/auth";
+import { isSafeUrl } from "../utils/validator";
 
 export async function handleProfilesRequest(request: Request, env: Env, user: User | null, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
@@ -92,6 +93,9 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
         for (const url of newSettings.upstream) {
           if (!url.startsWith('https://') && !url.startsWith('http://') && !url.startsWith('tcp://')) {
             return new Response("Invalid upstream URL format. Only HTTP(S) and TCP are allowed.", { status: 400 });
+          }
+          if (!isSafeUrl(url)) {
+            return new Response("Invalid upstream URL. Private networks and localhosts are not allowed.", { status: 400 });
           }
         }
       }
@@ -194,6 +198,9 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
         const { url: listUrl } = await request.json() as { url: string };
         if (!listUrl || (!listUrl.startsWith('http://') && !listUrl.startsWith('https://'))) {
           return new Response("Invalid list URL format", { status: 400 });
+        }
+        if (!isSafeUrl(listUrl)) {
+          return new Response("Invalid list URL. Private networks and localhosts are not allowed.", { status: 400 });
         }
         await profileModel.addList(profileId, listUrl);
         ctx.waitUntil(syncProfileLists(profileId, env, ctx));

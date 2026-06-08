@@ -4,11 +4,19 @@ import { fetchGeoIP } from "../utils/geoip";
 import { buildResponse, buildResponseMulti, buildDNSQuery, parseDNSAnswer, DNSRecord } from "../utils/dns";
 import { dnsCache } from "./cache";
 import { connect } from 'cloudflare:sockets';
+import { isSafeUrl } from "../utils/validator";
 
 export const pipelineResolver = {
   async resolve(request: Request, query: DNSQuery, context: Context, settings: ProfileSettings, action: 'PASS', reason?: string): Promise<ResolutionResult> {
     const logModel = new LogModel(context.env.DB);
     let upstreamUrl = settings.upstream[0] || "https://security.cloudflare-dns.com/dns-query";
+    if (!isSafeUrl(upstreamUrl)) {
+      return { 
+        answer: new Uint8Array(), ttl: 0, action: "FAIL", reason: "Unsafe upstream URL",
+        diagnostics: { upstream_url: upstreamUrl, method: "BLOCKED", status: 0 },
+        latency: Date.now() - context.startTime
+      };
+    }
     const startFetch = Date.now();
     let answer: Uint8Array;
     let upstreamLatency = 0;
