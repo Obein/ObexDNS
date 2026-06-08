@@ -3,7 +3,7 @@
   <h1>Obex DNS</h1>
   <p>Protective DNS resolver based on Cloudflare Workers & D1</p>
   <p align="center">
-    English | <a href="/README_zh-CN.md">简体中文</a> | <a href="/README_zh-TW.md">正體中文</a>
+    English | <a href="README_zh-CN.md">简体中文</a> | <a href="README_zh-TW.md">正體中文</a>
   </p>
 
   [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
@@ -87,9 +87,10 @@ DoH (RFC 8484) is a protocol for performing DNS queries via encrypted HTTPS conn
 │   │   ├── assets/       # Static assets (images, icons, etc.)
 │   │   ├── components/   # Reusable UI components
 │   │   ├── i18n/         # Internationalization (i18n) configuration
-│   │   ├── pages/        # Dashboard, logs, settings, and other pages
-│   │   ├── services/     # API request encapsulation
-│   │   └── views/        # View components
+│   │   ├── layouts/      # Layout components (dashboard layout, etc.)
+│   │   ├── routes/       # Frontend routing configuration
+│   │   ├── views/        # Main pages / views (dashboard, logs, settings, setup, etc.)
+│   │   └── utils/        # Utility helpers and functions
 │   └── package.json      # Frontend dependencies configuration
 ├── static/               # Compiled static resources
 ├── migrations/           # D1 Database migration scripts
@@ -129,7 +130,7 @@ npm install
 
 ```bash
 npm run db:setup
-npm run db:migrate
+npm run db:migrate:dev
 ```
 
 3.  Start the development server:
