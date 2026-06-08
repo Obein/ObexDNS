@@ -13,12 +13,8 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "obex_db"
-database_id = "13d8c24f-064a-40d6-8b10-fa70bb3f79ab"
-
-# KV Namespace for Cache (Deprecated, primary use Cache API)
-# [[kv_namespaces]]
-# binding = "CACHE_KV"
-# id = ""
+# This field is required!
+database_id = ""
 
 [triggers]
 crons = ["0 * * * *"]
