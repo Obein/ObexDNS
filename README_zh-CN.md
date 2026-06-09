@@ -160,6 +160,24 @@ npm run deploy
 4.  **创建 Worker**：前往 Cloudflare 控制台 `Workers & Pages` > `Create application` > `Create Worker`。
 5.  **从 GitHub 导入**：在部署页面选择 `Deploy from GitHub`，关联你 Fork 的项目并完成授权部署。
 
+### 线上部署到 Cloudflare Pages (⚠️ 不推荐)
+
+如果您希望以 Cloudflare Pages (Advanced Mode) 部署该项目：
+
+> [!WARNING]
+> **不推荐使用 Pages 部署**：本项目主要是 DNS 解析服务，对请求响应延迟极其敏感。Workers 作为轻量边缘函数比 Pages Functions 更适合此类低延迟 DoH 解析任务，且管理数据库绑定和路由配置更为直接。建议优先选择上述 Worker 部署方式。
+
+1.  **创建 D1 数据库**并复制其数据库 ID，将 ID 填入 `wrangler.toml` 中的 `database_id`。
+2.  在 Cloudflare 控制台选择 `Workers & Pages` > `Create application` > `Pages` > `Connect to Git`。
+3.  选择您的 Fork 仓库，并在构建设置中配置：
+    *   **框架预设 (Framework preset)**: `None`
+    *   **构建命令 (Build command)**: `npm run build:pages`
+    *   **输出目录 (Build output directory)**: `static`
+4.  部署完成后，前往 Pages 项目的 **设置 (Settings)** > **函数 (Functions)** > **D1 数据库绑定 (D1 database bindings)**，添加一个绑定：
+    *   **变量名称 (Variable name)**: `DB`
+    *   **D1 数据库**: 选择您刚刚创建的 `obex_db` 数据库。
+5.  重新部署该 Pages 项目以使绑定生效。
+
 ---
 
 ## 💪 感谢

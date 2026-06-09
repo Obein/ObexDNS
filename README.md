@@ -152,6 +152,24 @@ npm run deploy
 4.  **Create Worker**: Go to Cloudflare dashboard `Workers & Pages` > `Create application` > `Create Worker`.
 5.  **Import from GitHub**: On the deployment page, select `Deploy from GitHub`, connect your forked project, and complete the authorized deployment.
 
+### Online Deployment to Cloudflare Pages (⚠️ Not Recommended)
+
+If you wish to deploy the project using Cloudflare Pages (Advanced Mode):
+
+> [!WARNING]
+> **Not Recommended**: This project is primarily a DNS resolution service, which is highly sensitive to response latency. Workers, as lightweight edge functions, are much better suited for low-latency DoH resolution tasks compared to Pages Functions. Standard Worker deployment also offers simpler routing and binding management. We strongly suggest deploying via Workers instead.
+
+1.  **Create a D1 Database**, copy its ID, and paste it into the `database_id` field in `wrangler.toml`.
+2.  In the Cloudflare Dashboard, go to `Workers & Pages` > `Create application` > `Pages` > `Connect to Git`.
+3.  Select your forked repository, and configure the build settings:
+    *   **Framework preset**: `None`
+    *   **Build command**: `npm run build:pages`
+    *   **Build output directory**: `static`
+4.  After the initial deployment, go to the Pages project's **Settings** > **Functions** > **D1 database bindings**, and add a binding:
+    *   **Variable name**: `DB`
+    *   **D1 database**: Select your `obex_db` database.
+5.  Redeploy the Pages project for the bindings to take effect.
+
 ---
 
 ## 💪 Powered by
