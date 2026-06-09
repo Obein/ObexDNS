@@ -5,6 +5,9 @@ compatibility_flags = ["nodejs_compat"]
 # account_id = "edd3b2153e985b7379d40361254eb8bf"
 minify = true
 
+[build]
+command = "npm run build"
+
 [assets]
 directory = "./static"
 binding = "ASSETS"
