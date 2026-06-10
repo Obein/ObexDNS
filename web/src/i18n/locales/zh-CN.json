@@ -399,6 +399,7 @@
       "ip": "IP 地址",
       "empty": "暂无活动记录。",
       "loadMore": "加载更多",
+      "signup": "注册",
       "loginSuccess": "登录成功",
       "loginFail": "登录失败",
       "logout": "退出登录",

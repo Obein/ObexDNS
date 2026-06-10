@@ -399,6 +399,7 @@
       "ip": "IP Address",
       "empty": "No activity recorded yet.",
       "loadMore": "Load More",
+      "signup": "Register",
       "loginSuccess": "Login",
       "loginFail": "Login Failed",
       "logout": "Logout",

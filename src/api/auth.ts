@@ -93,6 +93,7 @@ export async function handleAuthRequest(request: Request, env: Env): Promise<Res
     try {
       const role = (await userModel.isEmpty()) ? 'admin' : 'user';
       await userModel.create({ id: userId, username, passwordHash: hashedPassword, role });
+      await activityLog.record(userId, 'signup', clientIp, userAgent);
       const session = await createSession(env, userId, clientIp, userAgent);
       const sessionCookie = createSessionCookie(session.id, env);
       return new Response(JSON.stringify({ success: true }), {

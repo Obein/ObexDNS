@@ -8,12 +8,18 @@ import {
   ShieldCheck,
   Shield,
   ShieldOff,
+  UserPlus,
 } from "lucide-react";
 
 export const ACTION_META: Record<
   string,
   { label: string; icon: React.ReactNode; intent: Intent }
 > = {
+  signup: {
+    label: "account.activity.signup",
+    icon: <UserPlus size={14} />,
+    intent: Intent.SUCCESS,
+  },
   login_success: {
     label: "account.activity.loginSuccess",
     icon: <LogIn size={14} />,

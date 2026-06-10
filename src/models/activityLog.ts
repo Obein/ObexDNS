@@ -1,6 +1,7 @@
 import { D1Database } from "@cloudflare/workers-types";
 
 export type ActivityAction =
+  | 'signup'
   | 'login_success'
   | 'login_fail'
   | 'logout'
