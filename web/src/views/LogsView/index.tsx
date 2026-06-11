@@ -8,6 +8,7 @@ import { LogsHeader } from "./components/LogsHeader";
 import { LogsTable } from "./components/LogsTable";
 import { LogsList } from "./components/LogsList";
 import { LogDetailsDrawer } from "./components/LogDetailsDrawer";
+const PAGE_SIZE = 50;
 
 export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) => {
   const isMobile = useIsMobile();
@@ -23,16 +24,38 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
   const [searchQuery, setSearchQuery] = useState("");
   const [hasMore, setHasMore] = useState(true);
   const [realtimeRefresh, setRealtimeRefresh] = useState(false);
+  const [stats, setStats] = useState<{ total: number; pass: number; block: number; redirect: number } | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const observer = useRef<IntersectionObserver | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isFetchingRef = useRef<boolean>(false);
+
+  // Clean up any pending requests when the component unmounts
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const fetchLogs = async (currentRange: TimeRange, isInitial: boolean = true) => {
+    // Abort the previous request if it's still running
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create a new AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    isFetchingRef.current = true;
+
     if (isInitial) setLoading(true);
     else setLoadingMore(true);
 
     try {
-      let url = `/api/profiles/${profileId}/logs?range=${currentRange}`;
+      let url = `/api/profiles/${profileId}/logs?range=${currentRange}&limit=${PAGE_SIZE}`;
       if (currentRange === "custom" && customRange.start && customRange.end) {
         const startTs = Math.floor(new Date(customRange.start).getTime() / 1000);
         const endTs = Math.floor(new Date(customRange.end).getTime() / 1000);
@@ -44,20 +67,62 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
         url += `&before=${logs[logs.length - 1].timestamp}`;
       }
 
-      const res = await fetch(url);
-      const data = await res.json();
+      const fetchLogsPromise = fetch(url, { signal: controller.signal }).then((r) => r.json());
+      let fetchStatsPromise: Promise<any> = Promise.resolve(null);
+      
       if (isInitial) {
-        setLogs(data);
-        setHasMore(data.length >= 50);
-      } else {
-        setLogs((prev) => [...prev, ...data]);
-        setHasMore(data.length >= 50);
+        let statsUrl = `/api/profiles/${profileId}/analytics/summary?range=${currentRange}`;
+        if (currentRange === "custom" && customRange.start && customRange.end) {
+          const startTs = Math.floor(new Date(customRange.start).getTime() / 1000);
+          const endTs = Math.floor(new Date(customRange.end).getTime() / 1000);
+          statsUrl += `&start=${startTs}&end=${endTs}`;
+        }
+        if (searchQuery) statsUrl += `&search=${encodeURIComponent(searchQuery)}`;
+        fetchStatsPromise = fetch(statsUrl, { signal: controller.signal }).then((r) => r.json());
       }
-    } catch (e) {
-      console.error(e);
+
+      const [logsData, statsData] = await Promise.all([fetchLogsPromise, fetchStatsPromise]);
+      console.log("logsData:", logsData, "statsData:", statsData);
+
+      if (isInitial) {
+        setLogs(logsData);
+        setHasMore(logsData.length >= PAGE_SIZE);
+        if (statsData) {
+          const summary = { total: 0, pass: 0, block: 0, redirect: 0 };
+          statsData.forEach((item: { action: string; count: number }) => {
+            const count = item.count;
+            summary.total += count;
+            if (item.action === "PASS") summary.pass = count;
+            else if (item.action === "BLOCK") summary.block = count;
+            else if (item.action === "REDIRECT") summary.redirect = count;
+          });
+          setStats(summary);
+        }
+      } else {
+        setLogs((prev) => [...prev, ...logsData]);
+        setHasMore(logsData.length >= PAGE_SIZE);
+      }
+
+      if (logsData && logsData.length > 0) {
+        const domains = Array.from(new Set(logsData.map((log: LogEntry) => log.domain)));
+        if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: "PREFETCH_ICONS",
+            domains,
+          });
+        }
+      }
+    } catch (e: any) {
+      if (e.name !== "AbortError") {
+        console.error(e);
+      }
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      // Only disable loading state if this is still the active/latest request
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+        setLoadingMore(false);
+        isFetchingRef.current = false;
+      }
     }
   };
 
@@ -92,7 +157,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
         realtimeRefresh &&
         scrollContainerRef.current &&
         scrollContainerRef.current.scrollTop < 50 &&
-        !loadingMore &&
+        !isFetchingRef.current && // Skip if there is an active request in progress
         !searchQuery &&
         range !== "custom"
       ) {
@@ -127,6 +192,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
         setStatusFilter={setStatusFilter}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        stats={stats}
       />
 
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 relative">
