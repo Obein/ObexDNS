@@ -26,7 +26,7 @@ export default defineConfig({
         type: 'module'
       }
     }),
-    visualizer({ open: true })
+    visualizer({ open: false, filename: './stats.html' })
   ],
   server: {
     host: '127.0.0.1',
