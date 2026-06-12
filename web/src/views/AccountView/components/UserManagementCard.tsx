@@ -18,6 +18,7 @@ export const UserManagementCard: React.FC<UserManagementCardProps> = ({ users, c
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState<'admin' | 'user'>('user');
   const [createLoading, setCreateLoading] = useState(false);
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
 
   const handleCreateUser = async () => {
     if (!/^[a-zA-Z0-9]{5,15}$/.test(newUsername)) { alert(t("account.formatTipUsername")); return; }
@@ -29,7 +30,7 @@ export const UserManagementCard: React.FC<UserManagementCardProps> = ({ users, c
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: newUsername, password: newUserPassword, role: newUserRole }),
       });
-      if (res.ok) { setIsDialogOpen(false); setNewUsername(""); setNewUserPassword(""); onRefresh(); }
+      if (res.ok) { setIsDialogOpen(false); setNewUsername(""); setNewUserPassword(""); setShowNewUserPassword(false); onRefresh(); }
       else { alert(await res.text()); }
     } catch (e) { console.error(e); }
     finally { setCreateLoading(false); }
@@ -58,6 +59,7 @@ export const UserManagementCard: React.FC<UserManagementCardProps> = ({ users, c
             <tr>
               <th>{t("account.username")}</th>
               <th>{t("account.role")}</th>
+              <th>2FA</th>
               <th>ID</th>
               <th>{t("account.createdAt")}</th>
               <th>{t("account.lastActive")}</th>
@@ -70,6 +72,13 @@ export const UserManagementCard: React.FC<UserManagementCardProps> = ({ users, c
               <tr key={u.id}>
                 <td className="font-bold">{u.username}</td>
                 <td><Tag minimal intent={u.role === 'admin' ? Intent.DANGER : Intent.NONE}>{u.role === 'admin' ? t("account.roleAdmin") : t("account.roleUser")}</Tag></td>
+                <td>
+                  {u.totp_enabled ? (
+                    <Tag minimal intent={Intent.SUCCESS}>TOTP</Tag>
+                  ) : (
+                    <Tag minimal intent={Intent.NONE} style={{ color: "#8a9ba8" }}>无</Tag>
+                  )}
+                </td>
                 <td><code className="text-xs">{u.id}</code></td>
                 <td className="text-xs text-gray-500">{u.created_at ? formatDateTime(new Date(u.created_at * 1000)) : '-'}</td>
                 <td className="text-xs text-gray-500">{u.last_active_at ? formatDateTime(new Date(u.last_active_at * 1000)) : '-'}</td>
@@ -81,10 +90,25 @@ export const UserManagementCard: React.FC<UserManagementCardProps> = ({ users, c
         </HTMLTable>
       </Card>
 
-      <Dialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} title={t("account.createNewUser")} icon="user">
+      <Dialog isOpen={isDialogOpen} onClose={() => { setIsDialogOpen(false); setShowNewUserPassword(false); }} title={t("account.createNewUser")} icon="user">
         <div className="p-6 space-y-4">
           <FormGroup label={t("account.username")}><InputGroup value={newUsername} onChange={e => setNewUsername(e.target.value)} placeholder={t("auth.usernamePlaceholder")} /></FormGroup>
-          <FormGroup label={t("account.initialPassword")}><InputGroup type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} placeholder={t("auth.passwordPlaceholder")} /></FormGroup>
+          <FormGroup label={t("account.initialPassword")}>
+            <InputGroup
+              type={showNewUserPassword ? "text" : "password"}
+              value={newUserPassword}
+              onChange={e => setNewUserPassword(e.target.value)}
+              placeholder={t("auth.passwordPlaceholder")}
+              rightElement={
+                <Button
+                  minimal={true}
+                  icon={showNewUserPassword ? "eye-open" : "eye-off"}
+                  onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                  title={showNewUserPassword ? t("auth.hidePassword", "Hide password") : t("auth.showPassword", "Show password")}
+                />
+              }
+            />
+          </FormGroup>
           <FormGroup label={t("account.userRole")}>
             <HTMLSelect fill value={newUserRole} onChange={e => setNewUserRole(e.target.value as any)} options={[{ label: t("account.roleUser"), value: "user" }, { label: t("account.roleAdmin"), value: "admin" }]} />
           </FormGroup>

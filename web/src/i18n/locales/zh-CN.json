@@ -68,7 +68,9 @@
     "verifying": "正在进行安全验证...",
     "passwordLeaked": "您的密码已被泄露，为了您的账户安全，请使用随机密码/强密码。",
     "usernameExists": "该用户名已被注册，请尝试其他用户名。",
-    "skip": "跳过"
+    "skip": "跳过",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码"
   },
   "setup": {
     "title": "安装指南",

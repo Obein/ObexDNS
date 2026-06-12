@@ -42,21 +42,31 @@ export const SignupPasswordStep: React.FC<SignupPasswordStepProps> = ({
   loading,
   onSubmit
 }) => {
+  const [showPassword, setShowPassword] = React.useState(false);
   const { t } = useTranslation();
 
   /**
-   * Renders a clear button inside the password input group.
+   * Renders the right elements (clear and/or show/hide password buttons) inside the password input group.
    *
-   * @returns React element or undefined.
+   * @returns React element.
    */
-  const renderPasswordClearButton = (): React.JSX.Element | undefined => {
-    if (!password) return undefined;
+  const renderPasswordRightElement = (): React.JSX.Element => {
     return (
-      <Button
-        minimal={true}
-        icon="cross"
-        onClick={() => setPassword("")}
-      />
+      <div className="flex items-center">
+        {password && (
+          <Button
+            minimal={true}
+            icon="cross"
+            onClick={() => setPassword("")}
+          />
+        )}
+        <Button
+          minimal={true}
+          icon={showPassword ? "eye-open" : "eye-off"}
+          onClick={() => setShowPassword(!showPassword)}
+          title={showPassword ? t("auth.hidePassword", "Hide password") : t("auth.showPassword", "Show password")}
+        />
+      </div>
     );
   };
 
@@ -75,7 +85,7 @@ export const SignupPasswordStep: React.FC<SignupPasswordStepProps> = ({
               id="password"
               leftIcon="lock"
               placeholder={t("auth.passwordPlaceholder")}
-              type="password"
+              type={showPassword ? "text" : "password"}
               size="large"
               className="rounded-xl w-full"
               value={password}
@@ -84,7 +94,7 @@ export const SignupPasswordStep: React.FC<SignupPasswordStepProps> = ({
               }
               onFocus={() => setPasswordFocused(true)}
               onBlur={() => setPasswordFocused(false)}
-              rightElement={renderPasswordClearButton()}
+              rightElement={renderPasswordRightElement()}
               required
               autoFocus
             />

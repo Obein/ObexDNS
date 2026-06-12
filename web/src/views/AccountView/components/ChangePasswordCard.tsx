@@ -76,6 +76,9 @@ export const ChangePasswordCard: React.FC<ChangePasswordCardProps> = ({
 }) => {
   const { t } = useTranslation();
 
+  const [showOldPassword, setShowOldPassword] = React.useState(false);
+  const [showNewPassword, setShowNewPassword] = React.useState(false);
+
   return (
     <Card elevation={Elevation.ONE}>
       <div className="flex items-center justify-between mb-4">
@@ -131,10 +134,18 @@ export const ChangePasswordCard: React.FC<ChangePasswordCardProps> = ({
           <FormGroup label={t("account.currentPassword")}>
             <InputGroup
               leftIcon="lock"
-              type="password"
+              type={showOldPassword ? "text" : "password"}
               value={oldPassword}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setOldPassword(e.target.value)
+              }
+              rightElement={
+                <Button
+                  minimal={true}
+                  icon={showOldPassword ? "eye-open" : "eye-off"}
+                  onClick={() => setShowOldPassword(!showOldPassword)}
+                  title={showOldPassword ? t("auth.hidePassword", "Hide password") : t("auth.showPassword", "Show password")}
+                />
               }
               required
             />
@@ -151,13 +162,21 @@ export const ChangePasswordCard: React.FC<ChangePasswordCardProps> = ({
             <div className="w-full block">
               <InputGroup
                 leftIcon="lock"
-                type="password"
+                type={showNewPassword ? "text" : "password"}
                 value={newPassword}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setNewPassword(e.target.value)
                 }
                 onFocus={() => setNewPasswordFocused(true)}
                 onBlur={() => setNewPasswordFocused(false)}
+                rightElement={
+                  <Button
+                    minimal={true}
+                    icon={showNewPassword ? "eye-open" : "eye-off"}
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    title={showNewPassword ? t("auth.hidePassword", "Hide password") : t("auth.showPassword", "Show password")}
+                  />
+                }
                 required
               />
             </div>

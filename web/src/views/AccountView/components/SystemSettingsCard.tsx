@@ -12,6 +12,7 @@ export const SystemSettingsCard: React.FC<SystemSettingsCardProps> = ({ initialS
   const { t } = useTranslation();
   const [sysSettings, setSysSettings] = useState<Record<string, string>>(initialSettings);
   const [sysLoading, setSysLoading] = useState(false);
+  const [showTurnstileSecretKey, setShowTurnstileSecretKey] = useState(false);
 
   React.useEffect(() => {
     setSysSettings(initialSettings);
@@ -53,10 +54,18 @@ export const SystemSettingsCard: React.FC<SystemSettingsCardProps> = ({ initialS
             </FormGroup>
             <FormGroup label="Secret Key">
               <InputGroup
-                type="password"
+                type={showTurnstileSecretKey ? "text" : "password"}
                 value={sysSettings.turnstile_secret_key || ""}
                 onChange={(e) => setSysSettings({ ...sysSettings, turnstile_secret_key: e.target.value })}
                 placeholder="0x000..."
+                rightElement={
+                  <Button
+                    minimal={true}
+                    icon={showTurnstileSecretKey ? "eye-open" : "eye-off"}
+                    onClick={() => setShowTurnstileSecretKey(!showTurnstileSecretKey)}
+                    title={showTurnstileSecretKey ? t("auth.hidePassword", "Hide password") : t("auth.showPassword", "Show password")}
+                  />
+                }
               />
             </FormGroup>
           </div>

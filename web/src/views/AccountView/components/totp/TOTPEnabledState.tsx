@@ -65,6 +65,7 @@ export const TOTPEnabledState: React.FC<TOTPEnabledStateProps> = ({
   onDisable
 }) => {
   const { t } = useTranslation();
+  const [showDisablePassword, setShowDisablePassword] = React.useState(false);
 
   return (
     <Card elevation={Elevation.ONE}>
@@ -105,6 +106,7 @@ export const TOTPEnabledState: React.FC<TOTPEnabledStateProps> = ({
           setDisableDialogOpen(false);
           setDisablePassword("");
           setDisableError("");
+          setShowDisablePassword(false);
         }}
         title={t("account.totp.disableTitle", "Disable 2FA")}
         icon="shield"
@@ -123,11 +125,19 @@ export const TOTPEnabledState: React.FC<TOTPEnabledStateProps> = ({
             <form onSubmit={onDisable} className="space-y-4">
               <FormGroup label={t("account.currentPassword")}>
                 <InputGroup
-                  type="password"
+                  type={showDisablePassword ? "text" : "password"}
                   leftIcon="lock"
                   value={disablePassword}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setDisablePassword(e.target.value)
+                  }
+                  rightElement={
+                    <Button
+                      minimal={true}
+                      icon={showDisablePassword ? "eye-open" : "eye-off"}
+                      onClick={() => setShowDisablePassword(!showDisablePassword)}
+                      title={showDisablePassword ? t("auth.hidePassword", "Hide password") : t("auth.showPassword", "Show password")}
+                    />
                   }
                   required
                 />

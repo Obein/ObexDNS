@@ -68,7 +68,9 @@
     "verifying": "Verifying security check...",
     "passwordLeaked": "Your password was found in a public data breach. For your security, please use a strong random password.",
     "usernameExists": "This username is already taken. Please try another one.",
-    "skip": "Skip"
+    "skip": "Skip",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "setup": {
     "title": "Setup Guide",
