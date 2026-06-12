@@ -58,6 +58,7 @@ export const UserManagementCard: React.FC<UserManagementCardProps> = ({ users, c
             <tr>
               <th>{t("account.username")}</th>
               <th>{t("account.role")}</th>
+              <th>2FA</th>
               <th>ID</th>
               <th>{t("account.createdAt")}</th>
               <th>{t("account.lastActive")}</th>
@@ -70,6 +71,13 @@ export const UserManagementCard: React.FC<UserManagementCardProps> = ({ users, c
               <tr key={u.id}>
                 <td className="font-bold">{u.username}</td>
                 <td><Tag minimal intent={u.role === 'admin' ? Intent.DANGER : Intent.NONE}>{u.role === 'admin' ? t("account.roleAdmin") : t("account.roleUser")}</Tag></td>
+                <td>
+                  {u.totp_enabled ? (
+                    <Tag minimal intent={Intent.SUCCESS}>TOTP</Tag>
+                  ) : (
+                    <Tag minimal intent={Intent.NONE} style={{ color: "#8a9ba8" }}>无</Tag>
+                  )}
+                </td>
                 <td><code className="text-xs">{u.id}</code></td>
                 <td className="text-xs text-gray-500">{u.created_at ? formatDateTime(new Date(u.created_at * 1000)) : '-'}</td>
                 <td className="text-xs text-gray-500">{u.last_active_at ? formatDateTime(new Date(u.last_active_at * 1000)) : '-'}</td>

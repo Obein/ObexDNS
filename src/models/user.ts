@@ -24,6 +24,7 @@ export class UserModel {
         u.username, 
         u.role, 
         u.created_at, 
+        u.totp_enabled,
         MAX(al.timestamp) as last_active_at,
         u.last_active_at as last_resolve_at
       FROM users u
