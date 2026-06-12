@@ -33,7 +33,7 @@ export function generateId(length: number): string {
 export async function createSession(env: Env, userId: string, ipAddress: string | null = null, userAgent: string | null = null): Promise<Session> {
   const sessionId = generateId(40);
   const now = Math.floor(Date.now() / 1000);
-  const expirationDays = Number(env.SESSION_EXPIRATION_DAYS) || 30;
+  const expirationDays = Number(env.SESSION_EXPIRATION_DAYS) || 1;
   const expiresAt = now + expirationDays * 24 * 60 * 60;
   
   const session: Session = {
@@ -83,12 +83,13 @@ export async function validateSession(env: Env, sessionId: string): Promise<Sess
     return { session: null, user: null };
   }
 
-  // Optionally extend session if close to expiration (e.g., less than 15 days)
+  // Optionally extend session if close to expiration (e.g., less than half of the total session duration)
   const timeRemaining = session.expires_at - Math.floor(Date.now() / 1000);
-  const fifteenDaysInSeconds = 15 * 24 * 60 * 60;
-  if (timeRemaining < fifteenDaysInSeconds) {
-    const expirationDays = Number(env.SESSION_EXPIRATION_DAYS) || 30;
-    session.expires_at = Math.floor(Date.now() / 1000) + expirationDays * 24 * 60 * 60;
+  const expirationDays = Number(env.SESSION_EXPIRATION_DAYS) || 1;
+  const totalDurationInSeconds = expirationDays * 24 * 60 * 60;
+  const extensionThreshold = Math.floor(totalDurationInSeconds / 2);
+  if (timeRemaining < extensionThreshold) {
+    session.expires_at = Math.floor(Date.now() / 1000) + totalDurationInSeconds;
     await sessionModel.extendSession(session.id, session.expires_at);
   }
 
@@ -107,7 +108,7 @@ export async function invalidateSession(env: Env, sessionId: string): Promise<vo
  * Returns a serialized Set-Cookie header string for a new session.
  */
 export function createSessionCookie(sessionId: string, env: Env): string {
-  const expirationDays = Number(env.SESSION_EXPIRATION_DAYS) || 30;
+  const expirationDays = Number(env.SESSION_EXPIRATION_DAYS) || 1;
   const maxAge = expirationDays * 24 * 60 * 60;
   return `${SESSION_COOKIE_NAME}=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}; Secure`;
 }
