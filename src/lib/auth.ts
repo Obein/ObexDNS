@@ -9,6 +9,8 @@ export interface Session {
   expires_at: number;
   ip_address?: string | null;
   user_agent?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface SessionValidationResult {
@@ -17,6 +19,49 @@ export interface SessionValidationResult {
 }
 
 const SESSION_COOKIE_NAME = "auth_session";
+
+/**
+ * Extracts coordinates from the request (headers first, then Cloudflare geo-IP).
+ */
+export function getRequestCoordinates(request: Request): { latitude: number | null, longitude: number | null } {
+  // 1. Direct browser geolocation from custom headers
+  const headerLat = request.headers.get("X-Client-Latitude");
+  const headerLon = request.headers.get("X-Client-Longitude");
+  if (headerLat && headerLon) {
+    const lat = parseFloat(headerLat);
+    const lon = parseFloat(headerLon);
+    if (!isNaN(lat) && !isNaN(lon)) {
+      return { latitude: lat, longitude: lon };
+    }
+  }
+
+  // 2. Fallback to Cloudflare IP-based location
+  const cf = (request as any).cf;
+  if (cf && cf.latitude && cf.longitude) {
+    const lat = parseFloat(cf.latitude);
+    const lon = parseFloat(cf.longitude);
+    if (!isNaN(lat) && !isNaN(lon)) {
+      return { latitude: lat, longitude: lon };
+    }
+  }
+
+  return { latitude: null, longitude: null };
+}
+
+/**
+ * Calculates the Haversine distance between two coordinates in kilometers.
+ */
+export function calculateDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 /**
  * Generates a secure random ID of the specified length.
@@ -30,7 +75,14 @@ export function generateId(length: number): string {
 /**
  * Creates a new session in the database and returns it.
  */
-export async function createSession(env: Env, userId: string, ipAddress: string | null = null, userAgent: string | null = null): Promise<Session> {
+export async function createSession(
+  env: Env,
+  userId: string,
+  ipAddress: string | null = null,
+  userAgent: string | null = null,
+  latitude: number | null = null,
+  longitude: number | null = null
+): Promise<Session> {
   const sessionId = generateId(40);
   const now = Math.floor(Date.now() / 1000);
   const expirationDays = Number(env.SESSION_EXPIRATION_DAYS) || 1;
@@ -42,19 +94,35 @@ export async function createSession(env: Env, userId: string, ipAddress: string 
     created_at: now,
     expires_at: expiresAt,
     ip_address: ipAddress,
-    user_agent: userAgent
+    user_agent: userAgent,
+    latitude: latitude,
+    longitude: longitude
   };
 
   const sessionModel = new SessionModel(env.DB);
-  await sessionModel.createSession(session.id, session.user_id, session.created_at, session.expires_at, session.ip_address, session.user_agent);
+  await sessionModel.createSession(
+    session.id,
+    session.user_id,
+    session.created_at,
+    session.expires_at,
+    session.ip_address,
+    session.user_agent,
+    session.latitude,
+    session.longitude
+  );
 
   return session;
 }
 
 /**
- * Validates a session from the database. Deletes it if expired.
+ * Validates a session from the database. Deletes it if expired or if geolocation mismatch/missing.
  */
-export async function validateSession(env: Env, sessionId: string): Promise<SessionValidationResult> {
+export async function validateSession(
+  env: Env,
+  sessionId: string,
+  currentLat: number | null = null,
+  currentLon: number | null = null
+): Promise<SessionValidationResult> {
   const sessionModel = new SessionModel(env.DB);
   const result = await sessionModel.getSessionWithUser(sessionId);
 
@@ -68,7 +136,9 @@ export async function validateSession(env: Env, sessionId: string): Promise<Sess
     created_at: result.created_at,
     expires_at: result.expires_at,
     ip_address: result.ip_address,
-    user_agent: result.user_agent
+    user_agent: result.user_agent,
+    latitude: result.latitude,
+    longitude: result.longitude
   };
 
   const user: User = {
@@ -79,6 +149,23 @@ export async function validateSession(env: Env, sessionId: string): Promise<Sess
   
   // Check expiration
   if (Math.floor(Date.now() / 1000) >= session.expires_at) {
+    await invalidateSession(env, session.id);
+    return { session: null, user: null };
+  }
+
+  // Strict Geolocation Check
+  if (
+    session.latitude === null || session.latitude === undefined ||
+    session.longitude === null || session.longitude === undefined ||
+    currentLat === null || currentLon === null
+  ) {
+    await invalidateSession(env, session.id);
+    return { session: null, user: null };
+  }
+
+  const distance = calculateDistanceInKm(session.latitude, session.longitude, currentLat, currentLon);
+  const maxDistance = Number(env.SESSION_GEO_DISTANCE_KM) || 50;
+  if (distance > maxDistance) {
     await invalidateSession(env, session.id);
     return { session: null, user: null };
   }
