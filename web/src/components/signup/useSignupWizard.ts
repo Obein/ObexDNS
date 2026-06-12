@@ -77,9 +77,9 @@ export const useSignupWizard = ({
   const isTurnstileEnabled = authConfig?.turnstile_enabled_signup;
 
   useEffect(() => {
-    // Only render turnstile in Step 1 (username step)
+    // Only render turnstile in Step 2 (password step)
     if (
-      signupStep === "username" &&
+      signupStep === "password" &&
       isTurnstileEnabled &&
       authConfig?.turnstile_site_key &&
       (turnstileReady || window.turnstile) &&
@@ -149,10 +149,6 @@ export const useSignupWizard = ({
       setError(t("auth.formatTipUsername"));
       return;
     }
-    if (isTurnstileEnabled && authConfig?.turnstile_site_key && !turnstileToken) {
-      setError(t("auth.turnstileRequired"));
-      return;
-    }
 
     setLoading(true);
     setError("");
@@ -220,6 +216,10 @@ export const useSignupWizard = ({
     }
     if (!validatePassword(password)) {
       setError(t("auth.formatTipPassword"));
+      return;
+    }
+    if (isTurnstileEnabled && authConfig?.turnstile_site_key && !turnstileToken) {
+      setError(t("auth.turnstileRequired"));
       return;
     }
 

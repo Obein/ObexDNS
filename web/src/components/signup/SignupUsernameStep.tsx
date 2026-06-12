@@ -23,14 +23,8 @@ export interface SignupUsernameStepProps {
   setUsernameFocused: (focused: boolean) => void;
   /** Callback to check username availability on backend. */
   checkUsernameDuplicate: (uname: string) => void;
-  /** Flag showing if Turnstile verification is enabled. */
-  isTurnstileEnabled: boolean | undefined;
-  /** Ref pointing to the Turnstile container div. */
-  turnstileRef: React.RefObject<HTMLDivElement | null>;
   /** Indicates if signup username submission is loading. */
   loading: boolean;
-  /** The current state of Turnstile verification. */
-  turnstileStatus: "idle" | "verifying" | "success" | "error";
   /** Callback to handle form submission. */
   onSubmit: (e: React.FormEvent) => void;
   /** Callback to reset or clear username specific errors. */
@@ -50,10 +44,7 @@ export const SignupUsernameStep: React.FC<SignupUsernameStepProps> = ({
   usernameFocused,
   setUsernameFocused,
   checkUsernameDuplicate,
-  isTurnstileEnabled,
-  turnstileRef,
   loading,
-  turnstileStatus,
   onSubmit,
   onClearError
 }) => {
@@ -92,26 +83,15 @@ export const SignupUsernameStep: React.FC<SignupUsernameStepProps> = ({
         </Tooltip>
       </FormGroup>
 
-      {isTurnstileEnabled && (
-        <div className="py-2 flex justify-center min-h-16.25">
-          <div ref={turnstileRef} />
-        </div>
-      )}
-
       <Button
         fill
         size="large"
         intent={Intent.PRIMARY}
         type="submit"
-        loading={loading || turnstileStatus === "verifying"}
-        disabled={
-          !!isTurnstileEnabled && turnstileStatus !== "success"
-        }
+        loading={loading}
         className="mt-6 font-bold py-6 rounded-xl shadow-lg shadow-blue-500/20"
       >
-        {turnstileStatus === "verifying"
-          ? t("auth.verifying")
-          : t("auth.next", "Next")}
+        {t("auth.next", "Next")}
       </Button>
     </form>
   );

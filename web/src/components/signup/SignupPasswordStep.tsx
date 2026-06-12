@@ -25,6 +25,12 @@ export interface SignupPasswordStepProps {
   loading: boolean;
   /** Callback to handle form submission. */
   onSubmit: (e: React.FormEvent) => void;
+  /** Flag showing if Turnstile verification is enabled. */
+  isTurnstileEnabled: boolean | undefined;
+  /** Ref pointing to the Turnstile container div. */
+  turnstileRef: React.RefObject<HTMLDivElement | null>;
+  /** The current state of Turnstile verification. */
+  turnstileStatus: "idle" | "verifying" | "success" | "error";
 }
 
 /**
@@ -40,7 +46,10 @@ export const SignupPasswordStep: React.FC<SignupPasswordStepProps> = ({
   passwordFocused,
   setPasswordFocused,
   loading,
-  onSubmit
+  onSubmit,
+  isTurnstileEnabled,
+  turnstileRef,
+  turnstileStatus
 }) => {
   const [showPassword, setShowPassword] = React.useState(false);
   const { t } = useTranslation();
@@ -102,15 +111,26 @@ export const SignupPasswordStep: React.FC<SignupPasswordStepProps> = ({
         </Tooltip>
       </FormGroup>
 
+      {isTurnstileEnabled && (
+        <div className="py-2 flex justify-center min-h-16.25">
+          <div ref={turnstileRef} />
+        </div>
+      )}
+
       <Button
         fill
         size="large"
         intent={Intent.PRIMARY}
         type="submit"
-        loading={loading}
+        loading={loading || turnstileStatus === "verifying"}
+        disabled={
+          !!isTurnstileEnabled && turnstileStatus !== "success"
+        }
         className="mt-6 font-bold py-6 rounded-xl shadow-lg shadow-blue-500/20"
       >
-        {t("auth.signupBtn")}
+        {turnstileStatus === "verifying"
+          ? t("auth.verifying")
+          : t("auth.signupBtn")}
       </Button>
     </form>
   );

@@ -137,10 +137,7 @@ export const SignupWizard: React.FC<SignupWizardProps> = ({
           usernameFocused={usernameFocused}
           setUsernameFocused={setUsernameFocused}
           checkUsernameDuplicate={checkUsernameDuplicate}
-          isTurnstileEnabled={isTurnstileEnabled}
-          turnstileRef={turnstileRef}
           loading={loading}
-          turnstileStatus={turnstileStatus}
           onSubmit={handleSignupUsernameSubmit}
           onClearError={() =>
             setError((prev) => (prev === t("auth.usernameExists") ? "" : prev))
@@ -157,6 +154,9 @@ export const SignupWizard: React.FC<SignupWizardProps> = ({
           setPasswordFocused={setPasswordFocused}
           loading={loading}
           onSubmit={handleSignupSubmit}
+          isTurnstileEnabled={isTurnstileEnabled}
+          turnstileRef={turnstileRef}
+          turnstileStatus={turnstileStatus}
         />
       )}
 
