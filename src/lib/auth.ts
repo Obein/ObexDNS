@@ -19,6 +19,7 @@ export interface SessionValidationResult {
 }
 
 const SESSION_COOKIE_NAME = "auth_session";
+const SESSION_ID_LENGTH = 80;
 
 /**
  * Extracts coordinates from the request (headers first, then Cloudflare geo-IP).
@@ -67,9 +68,15 @@ export function calculateDistanceInKm(lat1: number, lon1: number, lat2: number, 
  * Generates a secure random ID of the specified length.
  */
 export function generateId(length: number): string {
-  const bytes = new Uint8Array(length);
+  const byteLength = Math.ceil(length / 2);
+  const bytes = new Uint8Array(byteLength);
+  
   crypto.getRandomValues(bytes);
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, length);
+  
+  return Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, length);
 }
 
 /**
@@ -83,7 +90,7 @@ export async function createSession(
   latitude: number | null = null,
   longitude: number | null = null
 ): Promise<Session> {
-  const sessionId = generateId(40);
+  const sessionId = generateId(SESSION_ID_LENGTH);
   const now = Math.floor(Date.now() / 1000);
   const expirationDays = Number(env.SESSION_EXPIRATION_DAYS) || 1;
   const expiresAt = now + expirationDays * 24 * 60 * 60;
@@ -225,7 +232,7 @@ const PREAUTH_COOKIE_NAME = 'preauth_session';
  * @returns The pre-auth session token string
  */
 export async function createPreauthSession(env: Env, userId: string): Promise<string> {
-  const token = generateId(40);
+  const token = generateId(SESSION_ID_LENGTH);
   const preauthTtl = Number(env.PREAUTH_TTL_SECONDS) || 300;
   const expiresAt = Math.floor(Date.now() / 1000) + preauthTtl;
   const sessionModel = new SessionModel(env.DB);
