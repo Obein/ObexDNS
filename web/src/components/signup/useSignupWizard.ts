@@ -11,6 +11,7 @@ import {
   confirmSignupTotpApi,
   signupSubmitApi
 } from "./signupApi";
+import { setAccessToken } from "../../utils/token";
 
 interface AuthConfig {
   turnstile_site_key: string;
@@ -233,6 +234,10 @@ export const useSignupWizard = ({
       });
 
       if (res.ok) {
+        const data = await res.json();
+        if (data.accessToken) {
+          setAccessToken(data.accessToken);
+        }
         await startSignupTotpSetup();
       } else {
         const msg = await res.text();

@@ -1,14 +1,16 @@
 import { Env } from "../types";
 import {
   generateId,
-  createSession, createSessionCookie,
-  readSessionCookie, invalidateSession, createBlankSessionCookie,
+  createSession, createRefreshTokenCookie,
+  readRefreshTokenCookie, invalidateSession, createBlankRefreshTokenCookie,
   createPreauthSession, createPreauthCookie,
   validatePreauthSession, invalidatePreauthSession, clearPreauthCookie,
   readPreauthCookie,
   getRequestCoordinates,
   createCsrfCookie,
+  getOrCreateJwtSecret, rotateSession, parseRefreshTokenString
 } from "../lib/auth";
+import { importJwtSecret, signJWT } from "../lib/jwt";
 import { hashPassword, verifyPassword } from "../utils/crypto";
 import { verifyTOTP, findMatchingRecoveryKey } from "../lib/totp";
 import { UserModel } from "../models/user";
@@ -111,15 +113,26 @@ export async function handleAuthRequest(request: Request, env: Env): Promise<Res
       if (latitude === null || longitude === null) {
         return new Response("Geolocation required. Please allow location access.", { status: 400 });
       }
-      const session = await createSession(env, userId, clientIp, userAgent, latitude, longitude);
-      const sessionCookie = createSessionCookie(session.id, env);
+      const { session, refreshToken } = await createSession(env, userId, clientIp, userAgent, latitude, longitude);
+      const refreshCookie = createRefreshTokenCookie(refreshToken, env);
       const csrfToken = generateId(32);
       const csrfCookie = createCsrfCookie(csrfToken);
+      
+      const secret = await getOrCreateJwtSecret(env);
+      const jwtKey = await importJwtSecret(secret);
+      const expMinutes = Number(env.ACCESS_TOKEN_EXPIRATION_MINUTES) || 10;
+      const accessToken = await signJWT({ 
+        userId: userId, 
+        role: role, 
+        sessionId: session.id,
+        exp: Math.floor(Date.now() / 1000) + expMinutes * 60
+      }, jwtKey);
+
       const headers = new Headers();
-      headers.append("Set-Cookie", sessionCookie);
+      headers.append("Set-Cookie", refreshCookie);
       headers.append("Set-Cookie", csrfCookie);
       headers.append("Content-Type", "application/json");
-      return new Response(JSON.stringify({ success: true }), { headers });
+      return new Response(JSON.stringify({ success: true, accessToken }), { headers });
     } catch (e: any) { return new Response(e.message, { status: 400 }); }
   }
 
@@ -229,30 +242,83 @@ export async function handleAuthRequest(request: Request, env: Env): Promise<Res
     if (latitude === null || longitude === null) {
       return new Response("Geolocation required. Please allow location access.", { status: 400 });
     }
-    const session = await createSession(env, userId, clientIp, userAgent, latitude, longitude);
+    const { session, refreshToken } = await createSession(env, userId, clientIp, userAgent, latitude, longitude);
     const csrfToken = generateId(32);
     const csrfCookie = createCsrfCookie(csrfToken);
 
+    const secret = await getOrCreateJwtSecret(env);
+    const jwtKey = await importJwtSecret(secret);
+    const expMinutes = Number(env.ACCESS_TOKEN_EXPIRATION_MINUTES) || 10;
+    const accessToken = await signJWT({ 
+      userId: userId, 
+      role: user.role, 
+      sessionId: session.id,
+      exp: Math.floor(Date.now() / 1000) + expMinutes * 60
+    }, jwtKey);
+
     const headers = new Headers({ "Content-Type": "application/json" });
-    headers.append("Set-Cookie", createSessionCookie(session.id, env));
+    headers.append("Set-Cookie", createRefreshTokenCookie(refreshToken, env));
     headers.append("Set-Cookie", csrfCookie);
     headers.append("Set-Cookie", clearPreauthCookie());
     
-    return new Response(JSON.stringify({ success: true }), { headers });
+    return new Response(JSON.stringify({ success: true, accessToken }), { headers });
+  }
+
+  // 刷新 Token
+  if (url.pathname === '/api/auth/refresh' && request.method === 'POST') {
+    if (await cacheUtils.isRateLimited(cache, `refresh_fail:${clientIp}`, 20, 60)) {
+      return new Response("Too many attempts", { status: 429 });
+    }
+
+    const refreshToken = readRefreshTokenCookie(request.headers.get("Cookie"));
+    if (!refreshToken) return new Response("Refresh token missing", { status: 401 });
+
+    const { latitude, longitude } = getRequestCoordinates(request);
+    const { session, user, newRefreshToken } = await rotateSession(env, refreshToken, latitude, longitude);
+
+    if (!session || !user || !newRefreshToken) {
+      await cacheUtils.isRateLimited(cache, `refresh_fail:${clientIp}`, 100, 60);
+      return new Response(JSON.stringify({ error: "Invalid refresh token" }), { 
+        status: 401,
+        headers: {
+          "Set-Cookie": createBlankRefreshTokenCookie(),
+          "Content-Type": "application/json"
+        }
+      });
+    }
+
+    const secret = await getOrCreateJwtSecret(env);
+    const jwtKey = await importJwtSecret(secret);
+    const expMinutes = Number(env.ACCESS_TOKEN_EXPIRATION_MINUTES) || 10;
+    const accessToken = await signJWT({ 
+      userId: user.id, 
+      role: user.role, 
+      sessionId: session.id,
+      exp: Math.floor(Date.now() / 1000) + expMinutes * 60
+    }, jwtKey);
+
+    const headers = new Headers({ "Content-Type": "application/json" });
+    headers.append("Set-Cookie", createRefreshTokenCookie(newRefreshToken, env));
+
+    return new Response(JSON.stringify({ success: true, accessToken }), { headers });
   }
 
   if (url.pathname === '/api/auth/logout' && request.method === 'POST') {
-    const sessionId = readSessionCookie(request.headers.get("Cookie"));
-    if (sessionId) {
-      const sessionModel = new SessionModel(env.DB);
-      const userId = await sessionModel.getSessionUserId(sessionId);
-      await invalidateSession(env, sessionId);
-      if (userId) {
-        await activityLog.record(userId, 'logout', clientIp, userAgent);
+    const refreshToken = readRefreshTokenCookie(request.headers.get("Cookie"));
+    if (refreshToken) {
+      // Validate refresh token just enough to get the session ID and invalidate it
+      const parsed = parseRefreshTokenString(refreshToken);
+      if (parsed) {
+        const sessionModel = new SessionModel(env.DB);
+        const userId = await sessionModel.getSessionUserId(parsed.sid);
+        await invalidateSession(env, parsed.sid);
+        if (userId) {
+          await activityLog.record(userId, 'logout', clientIp, userAgent);
+        }
       }
     }
     return new Response(JSON.stringify({ success: true }), {
-      headers: { "Set-Cookie": createBlankSessionCookie(), "Content-Type": "application/json" }
+      headers: { "Set-Cookie": createBlankRefreshTokenCookie(), "Content-Type": "application/json" }
     });
   }
 

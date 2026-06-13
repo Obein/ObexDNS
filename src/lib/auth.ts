@@ -1,6 +1,8 @@
 import { D1Database } from "@cloudflare/workers-types";
 import { Env, User } from "../types";
 import { SessionModel } from "../models/session";
+import { SystemSettingsModel } from "../models/systemSettings";
+import { base64urlEncode, base64urlDecode } from "./jwt";
 
 export interface Session {
   id: string;
@@ -11,6 +13,7 @@ export interface Session {
   user_agent?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  rotation_counter?: number;
 }
 
 export interface SessionValidationResult {
@@ -18,7 +21,7 @@ export interface SessionValidationResult {
   user: User | null;
 }
 
-const SESSION_COOKIE_NAME = "auth_session";
+const REFRESH_TOKEN_COOKIE_NAME = "auth_refresh";
 const SESSION_ID_LENGTH = 80;
 
 /**
@@ -76,7 +79,46 @@ export function generateId(length: number): string {
 }
 
 /**
- * Creates a new session in the database and returns it.
+ * Gets or creates the JWT secret from system settings.
+ */
+export async function getOrCreateJwtSecret(env: Env): Promise<string> {
+  const settingsModel = new SystemSettingsModel(env.DB);
+  let secret = await settingsModel.get("jwt_secret");
+  if (!secret) {
+    const bytes = new Uint8Array(64); // 512 bits for HS512 (Post-Quantum safe symmetric key size)
+    crypto.getRandomValues(bytes);
+    secret = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    await settingsModel.set("jwt_secret", secret);
+  }
+  return secret;
+}
+
+/**
+ * Creates a refresh token string containing session ID, rotation version, and timestamp.
+ */
+export function createRefreshTokenString(sessionId: string, version: number): string {
+  const payload = {
+    sid: sessionId,
+    v: version,
+    ts: Date.now()
+  };
+  return base64urlEncode(JSON.stringify(payload));
+}
+
+/**
+ * Parses a refresh token string.
+ */
+export function parseRefreshTokenString(token: string): { sid: string, v: number, ts: number } | null {
+  try {
+    const jsonStr = new TextDecoder().decode(base64urlDecode(token));
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Creates a new session in the database and returns it along with the initial refresh token.
  */
 export async function createSession(
   env: Env,
@@ -85,7 +127,7 @@ export async function createSession(
   userAgent: string | null = null,
   latitude: number | null = null,
   longitude: number | null = null
-): Promise<Session> {
+): Promise<{ session: Session, refreshToken: string }> {
   const sessionId = generateId(SESSION_ID_LENGTH);
   const now = Math.floor(Date.now() / 1000);
   const expirationDays = Number(env.SESSION_EXPIRATION_DAYS) || 1;
@@ -114,23 +156,31 @@ export async function createSession(
     session.longitude
   );
 
-  return session;
+  const refreshToken = createRefreshTokenString(session.id, 0);
+
+  return { session, refreshToken };
 }
 
 /**
- * Validates a session from the database. Deletes it if expired or if geolocation mismatch/missing.
+ * Rotates a refresh token. Validates anti-reuse, geographic distance, and expiry.
+ * Returns the session, user, and a newly rotated refresh token.
  */
-export async function validateSession(
+export async function rotateSession(
   env: Env,
-  sessionId: string,
+  refreshTokenString: string,
   currentLat: number | null = null,
   currentLon: number | null = null
-): Promise<SessionValidationResult> {
+): Promise<{ session: Session | null, user: User | null, newRefreshToken: string | null }> {
+  const parsed = parseRefreshTokenString(refreshTokenString);
+  if (!parsed) {
+    return { session: null, user: null, newRefreshToken: null };
+  }
+
   const sessionModel = new SessionModel(env.DB);
-  const result = await sessionModel.getSessionWithUser(sessionId);
+  const result = await sessionModel.getSessionWithUser(parsed.sid);
 
   if (!result) {
-    return { session: null, user: null };
+    return { session: null, user: null, newRefreshToken: null };
   }
 
   const session: Session = {
@@ -141,7 +191,8 @@ export async function validateSession(
     ip_address: result.ip_address,
     user_agent: result.user_agent,
     latitude: result.latitude,
-    longitude: result.longitude
+    longitude: result.longitude,
+    rotation_counter: result.rotation_counter
   };
 
   const user: User = {
@@ -149,31 +200,38 @@ export async function validateSession(
     username: result.username,
     role: result.role as 'admin' | 'user'
   };
-  
-  // Check expiration
-  if (Math.floor(Date.now() / 1000) >= session.expires_at) {
+
+  // 1. Anti-reuse mechanism
+  if (session.rotation_counter !== parsed.v) {
+    // Token reuse detected. Terminate the session immediately.
     await invalidateSession(env, session.id);
-    return { session: null, user: null };
+    return { session: null, user: null, newRefreshToken: null };
   }
 
-  // Strict Geolocation Check
+  // 2. Expiration check
+  if (Math.floor(Date.now() / 1000) >= session.expires_at) {
+    await invalidateSession(env, session.id);
+    return { session: null, user: null, newRefreshToken: null };
+  }
+
+  // 3. Strict Geolocation Check
   if (
     session.latitude === null || session.latitude === undefined ||
     session.longitude === null || session.longitude === undefined ||
     currentLat === null || currentLon === null
   ) {
     await invalidateSession(env, session.id);
-    return { session: null, user: null };
+    return { session: null, user: null, newRefreshToken: null };
   }
 
   const distance = calculateDistanceInKm(session.latitude, session.longitude, currentLat, currentLon);
   const maxDistance = Number(env.SESSION_GEO_DISTANCE_KM) || 50;
   if (distance > maxDistance) {
     await invalidateSession(env, session.id);
-    return { session: null, user: null };
+    return { session: null, user: null, newRefreshToken: null };
   }
 
-  // Optionally extend session if close to expiration (e.g., less than half of the total session duration)
+  // 4. Session extension (if close to expiration)
   const timeRemaining = session.expires_at - Math.floor(Date.now() / 1000);
   const expirationDays = Number(env.SESSION_EXPIRATION_DAYS) || 1;
   const totalDurationInSeconds = expirationDays * 24 * 60 * 60;
@@ -183,7 +241,12 @@ export async function validateSession(
     await sessionModel.extendSession(session.id, session.expires_at);
   }
 
-  return { session, user };
+  // 5. Rotate the token
+  await sessionModel.incrementRotationCounter(session.id);
+  const newCounter = (session.rotation_counter || 0) + 1;
+  const newRefreshToken = createRefreshTokenString(session.id, newCounter);
+
+  return { session, user, newRefreshToken };
 }
 
 /**
@@ -195,27 +258,27 @@ export async function invalidateSession(env: Env, sessionId: string): Promise<vo
 }
 
 /**
- * Returns a serialized Set-Cookie header string for a new session.
+ * Returns a serialized Set-Cookie header string for a new refresh token.
  */
-export function createSessionCookie(sessionId: string, env: Env): string {
+export function createRefreshTokenCookie(refreshToken: string, env: Env): string {
   const expirationDays = Number(env.SESSION_EXPIRATION_DAYS) || 1;
   const maxAge = expirationDays * 24 * 60 * 60;
-  return `${SESSION_COOKIE_NAME}=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}; Secure`;
+  return `${REFRESH_TOKEN_COOKIE_NAME}=${refreshToken}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}; Secure`;
 }
 
 /**
- * Returns a serialized Set-Cookie header string to clear the session cookie.
+ * Returns a serialized Set-Cookie header string to clear the refresh token cookie.
  */
-export function createBlankSessionCookie(): string {
-  return `${SESSION_COOKIE_NAME}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0; Secure`;
+export function createBlankRefreshTokenCookie(): string {
+  return `${REFRESH_TOKEN_COOKIE_NAME}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0; Secure`;
 }
 
 /**
- * Parses the Cookie header and returns the session ID if present.
+ * Parses the Cookie header and returns the refresh token if present.
  */
-export function readSessionCookie(cookieHeader: string | null): string | null {
+export function readRefreshTokenCookie(cookieHeader: string | null): string | null {
   if (!cookieHeader) return null;
-  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE_NAME}=([^;]*)`));
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${REFRESH_TOKEN_COOKIE_NAME}=([^;]*)`));
   return match ? match[1] : null;
 }
 

@@ -10,7 +10,7 @@ export class SessionModel {
 
   async getSessionWithUser(sessionId: string): Promise<any> {
     return await this.db.prepare(`
-      SELECT sessions.id as session_id, sessions.user_id, sessions.created_at, sessions.expires_at, sessions.ip_address, sessions.user_agent, sessions.latitude, sessions.longitude,
+      SELECT sessions.id as session_id, sessions.user_id, sessions.created_at, sessions.expires_at, sessions.ip_address, sessions.user_agent, sessions.latitude, sessions.longitude, sessions.rotation_counter,
              users.id as u_id, users.username, users.role
       FROM sessions
       INNER JOIN users ON sessions.user_id = users.id
@@ -19,7 +19,7 @@ export class SessionModel {
   }
 
   async createSession(id: string, userId: string, createdAt: number, expiresAt: number, ipAddress: string | null = null, userAgent: string | null = null, latitude: number | null = null, longitude: number | null = null): Promise<boolean> {
-    const result = await this.db.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at, ip_address, user_agent, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+    const result = await this.db.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at, ip_address, user_agent, latitude, longitude, rotation_counter) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)")
       .bind(id, userId, createdAt, expiresAt, ipAddress, userAgent, latitude, longitude).run();
     return result.success;
   }
@@ -37,6 +37,12 @@ export class SessionModel {
   async extendSession(id: string, expiresAt: number): Promise<boolean> {
     const result = await this.db.prepare("UPDATE sessions SET expires_at = ? WHERE id = ?")
       .bind(expiresAt, id).run();
+    return result.success;
+  }
+
+  async incrementRotationCounter(id: string): Promise<boolean> {
+    const result = await this.db.prepare("UPDATE sessions SET rotation_counter = rotation_counter + 1 WHERE id = ?")
+      .bind(id).run();
     return result.success;
   }
 
