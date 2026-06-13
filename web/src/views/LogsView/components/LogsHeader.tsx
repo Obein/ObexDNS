@@ -13,10 +13,12 @@ import {
   Menu,
   MenuItem,
   MenuDivider,
+  HTMLSelect,
 } from "@blueprintjs/core";
 import { Calendar, Filter } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {  TimeRange  } from "../types";
+import type { AccessPoint } from "../../../types/auth";
 
 export interface LogsHeaderProps {
   range: TimeRange;
@@ -30,6 +32,9 @@ export interface LogsHeaderProps {
   setRealtimeRefresh: (val: boolean) => void;
   statusFilter: string | null;
   setStatusFilter: (val: string | null) => void;
+  accessPointIdFilter: string | null;
+  setAccessPointIdFilter: (val: string | null) => void;
+  accessPoints: AccessPoint[];
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   stats: { total: number; pass: number; block: number; redirect: number } | null;
@@ -47,6 +52,9 @@ export const LogsHeader: React.FC<LogsHeaderProps> = ({
   setRealtimeRefresh,
   statusFilter,
   setStatusFilter,
+  accessPointIdFilter,
+  setAccessPointIdFilter,
+  accessPoints,
   searchQuery,
   setSearchQuery,
   stats,
@@ -195,6 +203,17 @@ export const LogsHeader: React.FC<LogsHeaderProps> = ({
               fill={isMobile}
             />
           </Popover>
+          {accessPoints.length > 0 && (
+            <HTMLSelect 
+              value={accessPointIdFilter || ""}
+              onChange={(e) => setAccessPointIdFilter(e.target.value || null)}
+              options={[
+                { label: `All ${t("logs.filterAccessPoint")}s`, value: "" },
+                ...accessPoints.map(ap => ({ label: ap.name, value: ap.id }))
+              ]}
+              fill={isMobile}
+            />
+          )}
         </div>
         <div className="flex-1 md:max-w-xs">
           <InputGroup

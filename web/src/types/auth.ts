@@ -9,3 +9,11 @@ export interface UserInfo {
   username: string;
   role: "admin" | "user";
 }
+
+export interface AccessPoint {
+  id: string;
+  profile_id: string;
+  name: string;
+  token: string;
+  created_at: number;
+}

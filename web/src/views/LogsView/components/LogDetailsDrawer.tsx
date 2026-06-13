@@ -99,6 +99,9 @@ export const LogDetailsDrawer: React.FC<LogDetailsDrawerProps> = ({
                 />
                 <DetailItem label={t("logs.detailType")} value={selectedLog.record_type} />
                 <DetailItem label={t("logs.detailLatency")} value={selectedLog.latency ? `${selectedLog.latency} ms` : "-"} />
+                {selectedLog.access_point_name && (
+                  <DetailItem label={t("logs.detailAccessPoint")} value={selectedLog.access_point_name} />
+                )}
                 <DetailItem
                   label={t("logs.detailProfile")}
                   value={

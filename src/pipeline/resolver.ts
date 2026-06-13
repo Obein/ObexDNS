@@ -113,6 +113,7 @@ export const pipelineResolver = {
         const latency = Date.now() - context.startTime;
         await logModel.insert({
           profile_id: context.profileId,
+          access_point_id: context.accessPointId,
           timestamp: Math.floor(Date.now() / 1000),
           client_ip: clientIp,
           geo_country: (request as any).cf?.country || "UN",
@@ -220,6 +221,7 @@ export const pipelineResolver = {
     const latency = Date.now() - context.startTime;
     context.ctx.waitUntil(logModel.insert({
       profile_id: context.profileId,
+      access_point_id: context.accessPointId,
       timestamp: Math.floor(Date.now() / 1000),
       client_ip: clientIp,
       geo_country: (request as any).cf?.country || "UN",

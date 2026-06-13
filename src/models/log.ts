@@ -6,10 +6,11 @@ export class LogModel {
 
   async insert(log: ResolutionLog): Promise<boolean> {
     const result = await this.db.prepare(
-      "INSERT INTO logs (profile_id, timestamp, client_ip, geo_country, domain, record_type, action, reason, answer, dest_geoip, ecs, upstream, latency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO logs (profile_id, access_point_id, timestamp, client_ip, geo_country, domain, record_type, action, reason, answer, dest_geoip, ecs, upstream, latency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
       .bind(
         log.profile_id,
+        log.access_point_id || null,
         log.timestamp,
         log.client_ip,
         log.geo_country || null,
@@ -27,24 +28,34 @@ export class LogModel {
     return result.success;
   }
 
-  async getLogs(profileId: string, options: { since: number, until: number, status?: string, search?: string, before?: number, limit?: number }): Promise<ResolutionLog[]> {
-    let queryStr = "SELECT id, timestamp, domain, action, record_type, latency, answer, geo_country, reason FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ?";
+  async getLogs(profileId: string, options: { since: number, until: number, status?: string, search?: string, before?: number, limit?: number, access_point_id?: string }): Promise<ResolutionLog[]> {
+    let queryStr = `
+      SELECT l.id, l.timestamp, l.domain, l.action, l.record_type, l.latency, l.answer, l.geo_country, l.reason, l.access_point_id, ap.name as access_point_name 
+      FROM logs l
+      LEFT JOIN access_points ap ON l.access_point_id = ap.id
+      WHERE l.profile_id = ? AND l.timestamp >= ? AND l.timestamp <= ?
+    `;
     let params: any[] = [profileId, options.since, options.until];
     
-    if (options.status) { queryStr += " AND action = ?"; params.push(options.status); }
-    if (options.search) { queryStr += " AND domain LIKE ?"; params.push(`%${options.search}%`); }
-    if (options.before) { queryStr += " AND timestamp < ?"; params.push(options.before); }
+    if (options.status) { queryStr += " AND l.action = ?"; params.push(options.status); }
+    if (options.search) { queryStr += " AND l.domain LIKE ?"; params.push(`%${options.search}%`); }
+    if (options.before) { queryStr += " AND l.timestamp < ?"; params.push(options.before); }
+    if (options.access_point_id) { queryStr += " AND l.access_point_id = ?"; params.push(options.access_point_id); }
     
-    queryStr += ` ORDER BY timestamp DESC LIMIT ${options.limit || 50}`;
+    queryStr += ` ORDER BY l.timestamp DESC LIMIT ${options.limit || 50}`;
     
     const { results } = await this.db.prepare(queryStr).bind(...params).all<ResolutionLog>();
     return results;
   }
 
   async getLog(profileId: string, logId: number): Promise<ResolutionLog | null> {
-    return await this.db.prepare(
-      "SELECT l.*, p.name as profile_name FROM logs l JOIN profiles p ON l.profile_id = p.id WHERE l.profile_id = ? AND l.id = ?"
-    )
+    return await this.db.prepare(`
+      SELECT l.*, p.name as profile_name, ap.name as access_point_name 
+      FROM logs l 
+      JOIN profiles p ON l.profile_id = p.id 
+      LEFT JOIN access_points ap ON l.access_point_id = ap.id
+      WHERE l.profile_id = ? AND l.id = ?
+    `)
       .bind(profileId, logId)
       .first<ResolutionLog | null>();
   }
@@ -81,61 +92,78 @@ export class LogModel {
     }
   }
 
-  async getSummary(profileId: string, since: number, until: number, search?: string) {
+  async getSummary(profileId: string, since: number, until: number, search?: string, accessPointId?: string) {
     let queryStr = "SELECT action, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ?";
     let params: any[] = [profileId, since, until];
     if (search) {
       queryStr += " AND domain LIKE ?";
       params.push(`%${search}%`);
     }
+    if (accessPointId) {
+      queryStr += " AND access_point_id = ?";
+      params.push(accessPointId);
+    }
     queryStr += " GROUP BY action";
     const { results } = await this.db.prepare(queryStr).bind(...params).all<{ action: string, count: number }>();
     return results;
   }
 
-  async getTrend(profileId: string, since: number, until: number, interval: string) {
-    const { results } = await this.db.prepare(
-      `SELECT ${interval} as timestamp, action, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ? GROUP BY ${interval}, action ORDER BY timestamp ASC`
-    ).bind(profileId, since, until).all<{ timestamp: number, action: string, count: number }>();
+  async getTrend(profileId: string, since: number, until: number, interval: string, accessPointId?: string) {
+    let queryStr = `SELECT ${interval} as timestamp, action, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ?`;
+    let params: any[] = [profileId, since, until];
+    if (accessPointId) {
+      queryStr += " AND access_point_id = ?";
+      params.push(accessPointId);
+    }
+    queryStr += ` GROUP BY ${interval}, action ORDER BY timestamp ASC`;
+    const { results } = await this.db.prepare(queryStr).bind(...params).all<{ timestamp: number, action: string, count: number }>();
     return results;
   }
 
-  async getTopAllowed(profileId: string, since: number, until: number) {
-    const { results } = await this.db.prepare(
-      "SELECT domain, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ? AND action = 'PASS' GROUP BY domain ORDER BY count DESC LIMIT 10"
-    ).bind(profileId, since, until).all<{ domain: string, count: number }>();
+  async getTopAllowed(profileId: string, since: number, until: number, accessPointId?: string) {
+    let queryStr = "SELECT domain, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ? AND action = 'PASS'";
+    let params: any[] = [profileId, since, until];
+    if (accessPointId) { queryStr += " AND access_point_id = ?"; params.push(accessPointId); }
+    queryStr += " GROUP BY domain ORDER BY count DESC LIMIT 10";
+    const { results } = await this.db.prepare(queryStr).bind(...params).all<{ domain: string, count: number }>();
     return results;
   }
 
-  async getTopBlocked(profileId: string, since: number, until: number) {
-    const { results } = await this.db.prepare(
-      "SELECT domain, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ? AND action = 'BLOCK' GROUP BY domain ORDER BY count DESC LIMIT 10"
-    ).bind(profileId, since, until).all<{ domain: string, count: number }>();
+  async getTopBlocked(profileId: string, since: number, until: number, accessPointId?: string) {
+    let queryStr = "SELECT domain, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ? AND action = 'BLOCK'";
+    let params: any[] = [profileId, since, until];
+    if (accessPointId) { queryStr += " AND access_point_id = ?"; params.push(accessPointId); }
+    queryStr += " GROUP BY domain ORDER BY count DESC LIMIT 10";
+    const { results } = await this.db.prepare(queryStr).bind(...params).all<{ domain: string, count: number }>();
     return results;
   }
 
-  async getClients(profileId: string, since: number, until: number) {
-    const { results } = await this.db.prepare(
-      "SELECT client_ip, geo_country, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ? GROUP BY client_ip, geo_country ORDER BY count DESC LIMIT 10"
-    ).bind(profileId, since, until).all<{ client_ip: string, geo_country: string | null, count: number }>();
+  async getClients(profileId: string, since: number, until: number, accessPointId?: string) {
+    let queryStr = "SELECT client_ip, geo_country, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ?";
+    let params: any[] = [profileId, since, until];
+    if (accessPointId) { queryStr += " AND access_point_id = ?"; params.push(accessPointId); }
+    queryStr += " GROUP BY client_ip, geo_country ORDER BY count DESC LIMIT 10";
+    const { results } = await this.db.prepare(queryStr).bind(...params).all<{ client_ip: string, geo_country: string | null, count: number }>();
     return results;
   }
 
-  async getDestinations(profileId: string, since: number, until: number) {
-    const { results } = await this.db.prepare(
-      "SELECT dest_geoip, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ? AND dest_geoip IS NOT NULL GROUP BY dest_geoip ORDER BY count DESC LIMIT 10"
-    ).bind(profileId, since, until).all<{ dest_geoip: string, count: number }>();
+  async getDestinations(profileId: string, since: number, until: number, accessPointId?: string) {
+    let queryStr = "SELECT dest_geoip, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ? AND dest_geoip IS NOT NULL";
+    let params: any[] = [profileId, since, until];
+    if (accessPointId) { queryStr += " AND access_point_id = ?"; params.push(accessPointId); }
+    queryStr += " GROUP BY dest_geoip ORDER BY count DESC LIMIT 10";
+    const { results } = await this.db.prepare(queryStr).bind(...params).all<{ dest_geoip: string, count: number }>();
     return results;
   }
 
-  async getAnalytics(profileId: string, since: number, until: number, interval: string) {
+  async getAnalytics(profileId: string, since: number, until: number, interval: string, accessPointId?: string) {
     const [summary, trend, topAllowed, topBlocked, clients, destinations] = await Promise.all([
-      this.getSummary(profileId, since, until),
-      this.getTrend(profileId, since, until, interval),
-      this.getTopAllowed(profileId, since, until),
-      this.getTopBlocked(profileId, since, until),
-      this.getClients(profileId, since, until),
-      this.getDestinations(profileId, since, until)
+      this.getSummary(profileId, since, until, undefined, accessPointId),
+      this.getTrend(profileId, since, until, interval, accessPointId),
+      this.getTopAllowed(profileId, since, until, accessPointId),
+      this.getTopBlocked(profileId, since, until, accessPointId),
+      this.getClients(profileId, since, until, accessPointId),
+      this.getDestinations(profileId, since, until, accessPointId)
     ]);
     return { summary, trend, top_allowed: topAllowed, top_blocked: topBlocked, clients, destinations };
   }

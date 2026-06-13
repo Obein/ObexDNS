@@ -73,9 +73,16 @@ export const LogsTable: React.FC<LogsTableProps> = ({ logs, setSelectedLog, setI
                   {log.answer || "-"}
                 </td>
                 <td className="px-4 py-3">
-                  <Tag minimal className="font-mono text-[10px]">
-                    {getFlagEmoji(log.geo_country || "UN")}
-                  </Tag>
+                  <div className="flex items-center gap-2">
+                    <Tag minimal className="font-mono text-[10px]">
+                      {getFlagEmoji(log.geo_country || "UN")}
+                    </Tag>
+                    {log.access_point_name && (
+                      <span className="text-xs opacity-70 truncate max-w-[80px]" title={log.access_point_name}>
+                        {log.access_point_name}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <code className="text-[10px]">{log.record_type}</code>

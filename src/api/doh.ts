@@ -29,7 +29,14 @@ export async function handleDoHRequest(
       return new Response('Invalid DNS Query', { status: 400 });
     }
 
-    const context: Context = { profileId, startTime: Date.now(), env, ctx };
+    const context: Context = { 
+      profileId, 
+      accessPointId: profile.access_point_id, 
+      accessPointName: profile.access_point_name,
+      startTime: Date.now(), 
+      env, 
+      ctx 
+    };
     const result = await pipeline.process(request, query, context);
 
     // Async task: record active connections and update active timestamps with throttling

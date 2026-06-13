@@ -3,6 +3,7 @@ import { Spinner, Callout } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 
 import type {  LogEntry, LogsViewProps, TimeRange  } from "./types";
+import type { AccessPoint } from "../../types/auth";
 import { useIsMobile } from "./utils";
 import { LogsHeader } from "./components/LogsHeader";
 import { LogsTable } from "./components/LogsTable";
@@ -21,6 +22,8 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
   const [range, setRange] = useState<TimeRange>("24h");
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [accessPointIdFilter, setAccessPointIdFilter] = useState<string | null>(null);
+  const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [hasMore, setHasMore] = useState(true);
   const [realtimeRefresh, setRealtimeRefresh] = useState(false);
@@ -39,6 +42,13 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
       }
     };
   }, []);
+
+  useEffect(() => {
+    fetch(`/api/profiles/${profileId}/access_points`)
+      .then(r => r.json())
+      .then(setAccessPoints)
+      .catch(console.error);
+  }, [profileId]);
 
   const fetchLogs = async (currentRange: TimeRange, isInitial: boolean = true) => {
     // Abort the previous request if it's still running
@@ -62,6 +72,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
         url += `&start=${startTs}&end=${endTs}`;
       }
       if (statusFilter) url += `&status=${statusFilter}`;
+      if (accessPointIdFilter) url += `&access_point_id=${accessPointIdFilter}`;
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
       if (!isInitial && logs.length > 0) {
         url += `&before=${logs[logs.length - 1].timestamp}`;
@@ -128,7 +139,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
 
   const loadMore = useCallback(() => {
     if (!loading && !loadingMore && hasMore) fetchLogs(range, false);
-  }, [loading, loadingMore, hasMore, range, profileId, statusFilter, searchQuery, logs, customRange]);
+  }, [loading, loadingMore, hasMore, range, profileId, statusFilter, accessPointIdFilter, searchQuery, logs, customRange]);
 
   const lastLogElementRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -149,7 +160,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
     if (range === "custom" && (!customRange.start || !customRange.end)) return;
     const timer = setTimeout(() => fetchLogs(range, true), searchQuery ? 500 : 0);
     return () => clearTimeout(timer);
-  }, [profileId, range, statusFilter, searchQuery, customRange]);
+  }, [profileId, range, statusFilter, accessPointIdFilter, searchQuery, customRange]);
 
   useEffect(() => {
     const autoRefreshTimer = setInterval(() => {
@@ -165,7 +176,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
       }
     }, 2000);
     return () => clearInterval(autoRefreshTimer);
-  }, [profileId, range, searchQuery, realtimeRefresh]);
+  }, [profileId, range, searchQuery, realtimeRefresh, statusFilter, accessPointIdFilter]);
 
   const nowStr = new Date().toLocaleString("sv-SE").replace(" ", "T").slice(0, 16);
 
@@ -190,6 +201,9 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
         setRealtimeRefresh={setRealtimeRefresh}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
+        accessPointIdFilter={accessPointIdFilter}
+        setAccessPointIdFilter={setAccessPointIdFilter}
+        accessPoints={accessPoints}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         stats={stats}

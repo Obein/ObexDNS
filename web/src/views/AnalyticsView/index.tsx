@@ -13,6 +13,7 @@ import {
   Popover,
   FormGroup,
   InputGroup,
+  HTMLSelect,
 } from "@blueprintjs/core";
 import { Shield, ShieldAlert, Zap, Globe, MapPin, Calendar, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -22,6 +23,7 @@ import { getFlagEmoji, processTrendData } from "./utils";
 import { MetricCard } from "./components/MetricCard";
 import { RankTable } from "./components/RankTable";
 import { TrendChart } from "./components/TrendChart";
+import type { AccessPoint } from "../../types/auth";
 
 export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) => {
   const [data, setData] = useState<AnalyticsData | null>(null);
@@ -29,8 +31,17 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
   const { t } = useTranslation();
   const [range, setRange] = useState<TimeRange>("24h");
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
+  const [accessPointIdFilter, setAccessPointIdFilter] = useState<string | null>(null);
+  const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([]);
 
-  const fetchData = async (selectedRange: TimeRange, customStart?: string, customEnd?: string) => {
+  useEffect(() => {
+    fetch(`/api/profiles/${profileId}/access_points`)
+      .then(r => r.json())
+      .then(data => setAccessPoints(data))
+      .catch(e => console.error("Failed to load access points", e));
+  }, [profileId]);
+
+  const fetchData = async (selectedRange: TimeRange, customStart?: string, customEnd?: string, apIdFilter?: string | null) => {
     setLoading(true);
     try {
       let queryParams = `?range=${selectedRange}`;
@@ -38,6 +49,9 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
         const startTs = Math.floor(new Date(customStart).getTime() / 1000);
         const endTs = Math.floor(new Date(customEnd).getTime() / 1000);
         queryParams += `&start=${startTs}&end=${endTs}`;
+      }
+      if (apIdFilter) {
+        queryParams += `&access_point_id=${apIdFilter}`;
       }
       
       const baseStatsUrl = `/api/profiles/${profileId}/analytics`;
@@ -67,9 +81,9 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
 
   useEffect(() => {
     if (range !== "custom") {
-      fetchData(range);
+      fetchData(range, undefined, undefined, accessPointIdFilter);
     }
-  }, [profileId, range]);
+  }, [profileId, range, accessPointIdFilter]);
 
   if (loading && !data) {
     return (
@@ -92,7 +106,7 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
     { title: t("analytics.blocked"), value: blocked.toLocaleString(), icon: <ShieldAlert className="text-red-500" size={20} /> },
     { title: t("analytics.redirected"), value: redirected.toLocaleString(), icon: <RotateCcw className="text-amber-500" size={20} /> },
     { title: t("analytics.blockRate"), value: `${blockRate}%`, icon: <Shield className="text-green-500" size={20} /> },
-    { title: t("analytics.activeDevices"), value: data?.clients.length.toString() || "0", icon: <Globe className="text-purple-500" size={20} /> },
+    { title: t("analytics."), value: data?.clients.length.toString() || "0", icon: <Globe className="text-purple-500" size={20} /> },
   ];
 
   return (
@@ -130,7 +144,7 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
                   text={t("analytics.apply")}
                   onClick={() => {
                     setRange("custom");
-                    fetchData("custom", customRange.start, customRange.end);
+                    fetchData("custom", customRange.start, customRange.end, accessPointIdFilter);
                   }}
                 />
               </div>
@@ -139,7 +153,20 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
             <Button active={range === "custom"} icon={<Calendar size={14} className="mr-1" />} text={t("analytics.custom")} />
           </Popover>
         </ButtonGroup>
-        {loading && <Spinner size={16} />}
+        <div className="flex items-center gap-4">
+          {accessPoints.length > 0 && (
+            <HTMLSelect 
+              value={accessPointIdFilter || ""}
+              onChange={(e) => setAccessPointIdFilter(e.target.value || null)}
+              options={[
+                { label: `All ${t("logs.filterAccessPoint")}s`, value: "" },
+                ...accessPoints.map(ap => ({ label: ap.name, value: ap.id }))
+              ]}
+              minimal
+            />
+          )}
+          {loading && <Spinner size={16} />}
+        </div>
       </div>
 
       {/* Metrics */}

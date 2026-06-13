@@ -9,12 +9,45 @@ import { SetupHeader } from "./components/SetupHeader";
 import { VerifyConnectionCard } from "./components/VerifyConnectionCard";
 import { DohUrlCard } from "./components/DohUrlCard";
 import { SetupTabs } from "./components/SetupTabs";
+import { AccessPointDrawer } from "./components/AccessPointDrawer";
+import type { AccessPoint } from "../../types/auth";
 
 export const SetupView: React.FC<SetupViewProps> = ({ profileId, profileKey, toasterRef }) => {
   const isMobile = useIsMobile();
   const { t, i18n } = useTranslation();
   const presetRegions = useMemo(() => getPresetRegions(t), [i18n.language, t]);
-  const dohUrl = `${window.location.origin}/${profileKey}`;
+  
+  const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([]);
+  const [loadingAccessPoints, setLoadingAccessPoints] = useState(false);
+  const [isAccessPointDrawerOpen, setIsAccessPointDrawerOpen] = useState(false);
+  const [selectedApId, setSelectedApId] = useState<string | null>(null);
+
+  const fetchAccessPoints = async () => {
+    setLoadingAccessPoints(true);
+    try {
+      const res = await fetch(`/api/profiles/${profileId}/access_points`);
+      if (res.ok) {
+        setAccessPoints(await res.json());
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingAccessPoints(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAccessPoints();
+  }, [profileId]);
+
+  const activeAp = useMemo(() => {
+    if (accessPoints.length === 0) return null;
+    return accessPoints.find(ap => ap.id === selectedApId) || accessPoints[0];
+  }, [accessPoints, selectedApId]);
+
+  const activeToken = activeAp ? activeAp.token : profileKey;
+  const activeName = activeAp ? activeAp.name : undefined;
+  const dohUrl = `${window.location.origin}/${activeToken}`;
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [substituteDomainIp, setSubstituteDomainIp] = useState<string | null>(null);
@@ -186,15 +219,35 @@ export const SetupView: React.FC<SetupViewProps> = ({ profileId, profileKey, toa
         setShowIp={setShowIp}
       />
 
-      <DohUrlCard dohUrl={dohUrl} copyToClipboard={copyToClipboard} isMobile={isMobile} />
+      <DohUrlCard 
+        dohUrl={dohUrl} 
+        accessPointName={activeName}
+        copyToClipboard={copyToClipboard} 
+        isMobile={isMobile} 
+        onManageAccessPoints={() => setIsAccessPointDrawerOpen(true)}
+        accessPoints={accessPoints}
+        selectedApId={activeAp?.id || null}
+        onSelectAp={setSelectedApId}
+      />
 
       <SetupTabs
         isMobile={isMobile}
         copyToClipboard={copyToClipboard}
-        profileKey={profileKey}
+        profileKey={activeToken}
         allRegions={allRegions}
         selectedRegion={selectedRegion}
         currentIps={currentIps}
+      />
+
+      <AccessPointDrawer
+        isOpen={isAccessPointDrawerOpen}
+        onClose={() => setIsAccessPointDrawerOpen(false)}
+        profileId={profileId}
+        isMobile={isMobile}
+        accessPoints={accessPoints}
+        loading={loadingAccessPoints}
+        onRefresh={fetchAccessPoints}
+        toasterRef={toasterRef as any}
       />
     </div>
   );

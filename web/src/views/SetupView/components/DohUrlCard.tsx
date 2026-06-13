@@ -1,20 +1,35 @@
 import React from "react";
-import { Section, SectionCard, Button, Popover, Position, H5, Intent } from "@blueprintjs/core";
+import { Section, SectionCard, Button, Popover, Position, H5, Intent, HTMLSelect } from "@blueprintjs/core";
 import { ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { AccessPoint } from "../../../types/auth";
 
 export interface DohUrlCardProps {
   dohUrl: string;
+  accessPointName?: string;
   copyToClipboard: (text: string) => void;
   isMobile: boolean;
+  onManageAccessPoints: () => void;
+  accessPoints: AccessPoint[];
+  selectedApId: string | null;
+  onSelectAp: (id: string) => void;
 }
 
-export const DohUrlCard: React.FC<DohUrlCardProps> = ({ dohUrl, copyToClipboard, isMobile }) => {
+export const DohUrlCard: React.FC<DohUrlCardProps> = ({
+  dohUrl,
+  accessPointName,
+  copyToClipboard,
+  isMobile,
+  onManageAccessPoints,
+  accessPoints,
+  selectedApId,
+  onSelectAp,
+}) => {
   const { t } = useTranslation();
 
   return (
     <Section
-      title={t("setup.dohUrlTitle")}
+      title={t("setup.accessPointTitle")}
       icon="globe"
       rightElement={
         <Popover
@@ -48,20 +63,43 @@ export const DohUrlCard: React.FC<DohUrlCardProps> = ({ dohUrl, copyToClipboard,
       }
     >
       <SectionCard>
-        <div className="flex flex-col md:flex-row items-center gap-4">
-          <div className="flex-1 w-full bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 font-mono text-blue-600 dark:text-blue-400 break-all text-xs md:text-sm">
-            {dohUrl}
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center text-sm">
+            {accessPoints.length > 0 ? (
+              <HTMLSelect
+                value={selectedApId || ""}
+                onChange={(e) => onSelectAp(e.target.value)}
+                options={accessPoints.map(ap => ({ label: ap.name, value: ap.id }))}
+                minimal
+                className="font-semibold text-gray-900 dark:text-gray-100"
+              />
+            ) : (
+              <div className="font-semibold flex items-center gap-2">
+                {accessPointName || t("setup.defaultAccessPointName")}
+              </div>
+            )}
+            <Button 
+              variant="minimal" 
+              intent={Intent.PRIMARY} 
+              className="text-xs! px-2!" 
+              text={t("setup.moreAccessPoints")} 
+              onClick={onManageAccessPoints} 
+            />
           </div>
-          <Button
-            size="large"
-            intent={Intent.PRIMARY}
-            icon="duplicate"
-            text={t("setup.copyUrl")}
-            fill={isMobile}
-            onClick={() => copyToClipboard(dohUrl)}
-          />
+          <div className="w-full bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <span className="font-mono text-blue-600 dark:text-blue-400 break-all text-xs sm:text-sm">{dohUrl}</span>
+            <Button
+              intent={Intent.PRIMARY}
+              icon="duplicate"
+              text={t("setup.copyUrl")}
+              fill={isMobile}
+              onClick={() => copyToClipboard(dohUrl)}
+              className="shrink-0"
+            />
+          </div>
         </div>
       </SectionCard>
     </Section>
   );
 };
+

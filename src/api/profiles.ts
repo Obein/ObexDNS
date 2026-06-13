@@ -151,6 +151,7 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
       const before = urlParams.get('before');
       const status = urlParams.get('status');
       const search = urlParams.get('search');
+      const accessPointId = urlParams.get('access_point_id');
       const startParam = urlParams.get('start');
       const endParam = urlParams.get('end');
       
@@ -175,7 +176,7 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
         since = Math.max(since, retentionThreshold);
       }
 
-      const results = await logModel.getLogs(profileId, { since, until, status: status || undefined, search: search || undefined, before: before ? parseInt(before) : undefined, limit: parseInt(urlParams.get('limit') || '50') });
+      const results = await logModel.getLogs(profileId, { since, until, status: status || undefined, search: search || undefined, before: before ? parseInt(before) : undefined, limit: parseInt(urlParams.get('limit') || '50'), access_point_id: accessPointId || undefined });
       return new Response(JSON.stringify(results), { headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -185,6 +186,7 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
       const range = urlParams.get('range');
       const startParam = urlParams.get('start');
       const endParam = urlParams.get('end');
+      const accessPointId = urlParams.get('access_point_id') || undefined;
       let since: number; let until = Math.floor(Date.now() / 1000); let interval: string;
 
       if (startParam && endParam) { since = parseInt(startParam); until = parseInt(endParam); interval = "(timestamp/3600)*3600"; }
@@ -203,33 +205,33 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
       if (subResource) {
         if (subResource === 'summary') {
           const search = urlParams.get('search') || undefined;
-          const summary = await logModel.getSummary(profileId, since, until, search);
+          const summary = await logModel.getSummary(profileId, since, until, search, accessPointId);
           return new Response(JSON.stringify(summary), { headers: { 'Content-Type': 'application/json' } });
         }
         if (subResource === 'trend') {
-          const trend = await logModel.getTrend(profileId, since, until, interval);
+          const trend = await logModel.getTrend(profileId, since, until, interval, accessPointId);
           return new Response(JSON.stringify(trend), { headers: { 'Content-Type': 'application/json' } });
         }
         if (subResource === 'top_allowed') {
-          const topAllowed = await logModel.getTopAllowed(profileId, since, until);
+          const topAllowed = await logModel.getTopAllowed(profileId, since, until, accessPointId);
           return new Response(JSON.stringify(topAllowed), { headers: { 'Content-Type': 'application/json' } });
         }
         if (subResource === 'top_blocked') {
-          const topBlocked = await logModel.getTopBlocked(profileId, since, until);
+          const topBlocked = await logModel.getTopBlocked(profileId, since, until, accessPointId);
           return new Response(JSON.stringify(topBlocked), { headers: { 'Content-Type': 'application/json' } });
         }
         if (subResource === 'clients') {
-          const clients = await logModel.getClients(profileId, since, until);
+          const clients = await logModel.getClients(profileId, since, until, accessPointId);
           return new Response(JSON.stringify(clients), { headers: { 'Content-Type': 'application/json' } });
         }
         if (subResource === 'destinations') {
-          const destinations = await logModel.getDestinations(profileId, since, until);
+          const destinations = await logModel.getDestinations(profileId, since, until, accessPointId);
           return new Response(JSON.stringify(destinations), { headers: { 'Content-Type': 'application/json' } });
         }
         return new Response("Not Found", { status: 404 });
       }
       
-      const analytics = await logModel.getAnalytics(profileId, since, until, interval);
+      const analytics = await logModel.getAnalytics(profileId, since, until, interval, accessPointId);
       return new Response(JSON.stringify(analytics), { headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -254,6 +256,37 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
         await profileModel.deleteList(id, profileId);
         ctx.waitUntil(syncProfileLists(profileId, env, ctx));
         ctx.waitUntil(pipeline.clearCache(profileId));
+        return new Response(null, { status: 204 });
+      }
+    }
+
+    // 子资源路由: /api/profiles/:id/access_points
+    if (pathParts[3] === 'access_points') {
+      if (request.method === 'GET') {
+        const results = await profileModel.getAccessPoints(profileId);
+        return new Response(JSON.stringify(results), { headers: { 'Content-Type': 'application/json' } });
+      }
+      if (request.method === 'POST') {
+        if (pathParts.length === 6 && pathParts[5] === 'rotate_token') {
+          const apId = pathParts[4];
+          const newToken = await profileModel.rotateAccessPointToken(apId, profileId);
+          return new Response(JSON.stringify({ token: newToken }), { headers: { 'Content-Type': 'application/json' } });
+        }
+        const body = await request.json() as { name: string };
+        if (!body.name) return new Response("Name is required", { status: 400 });
+        const result = await profileModel.addAccessPoint(profileId, body.name);
+        return new Response(JSON.stringify(result), { status: 201, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (request.method === 'PATCH' && pathParts.length === 5) {
+        const apId = pathParts[4];
+        const body = await request.json() as { name: string };
+        if (!body.name) return new Response("Name is required", { status: 400 });
+        await profileModel.updateAccessPointName(apId, profileId, body.name);
+        return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
+      }
+      if (request.method === 'DELETE' && pathParts.length === 5) {
+        const apId = pathParts[4];
+        await profileModel.deleteAccessPoint(apId, profileId);
         return new Response(null, { status: 204 });
       }
     }

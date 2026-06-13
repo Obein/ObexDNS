@@ -11,6 +11,8 @@ export interface LogEntry {
   dest_geoip?: string; // JSON string
   ecs?: string;
   profile_name?: string;
+  access_point_id?: string;
+  access_point_name?: string;
   upstream?: string;
   latency?: number;
 }

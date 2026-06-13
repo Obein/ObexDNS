@@ -110,6 +110,7 @@ export interface ResolutionResult {
 export interface ResolutionLog {
   id?: number;
   profile_id: string;
+  access_point_id?: string;
   timestamp: number;
   client_ip: string;
   geo_country: string;
@@ -128,7 +129,18 @@ export interface ExecutionContext extends CFExecutionContext {}
 
 export interface Context {
   profileId: string;
+  accessPointId?: string;
+  accessPointName?: string;
   startTime: number;
   env: Env;
   ctx: ExecutionContext;
+}
+
+export interface AccessPoint {
+  id: string;
+  profile_id: string;
+  name: string;
+  token: string;
+  created_at: number;
+  updated_at: number;
 }

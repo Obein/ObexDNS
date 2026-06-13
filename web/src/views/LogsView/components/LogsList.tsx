@@ -57,6 +57,11 @@ export const LogsList: React.FC<LogsListProps> = ({ logs, setSelectedLog, setIsD
               <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-1 rounded opacity-60">
                 {log.record_type}
               </span>
+              {log.access_point_name && (
+                <span className="text-[10px] opacity-50 truncate max-w-[100px]">
+                  {log.access_point_name}
+                </span>
+              )}
             </div>
             <div className="text-[10px] opacity-40 font-mono italic">
               {log.latency ? `${log.latency}ms` : ""}
