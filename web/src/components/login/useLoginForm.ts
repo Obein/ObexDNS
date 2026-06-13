@@ -5,6 +5,7 @@ import {
   isPasswordLeaked,
   hashTotpToken
 } from "../../utils/auth";
+import { setAccessToken } from "../../utils/token";
 
 interface AuthConfig {
   turnstile_site_key: string;
@@ -181,6 +182,10 @@ export const useLoginForm = ({
       });
 
       if (res.ok) {
+        const data = await res.json();
+        if (data.accessToken) {
+          setAccessToken(data.accessToken);
+        }
         onSuccess();
       } else {
         const msg = await res.text();

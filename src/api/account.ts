@@ -1,6 +1,6 @@
 import { Env, User, ExecutionContext } from "../types";
 import { RBAC } from "../lib/rbac";
-import { generateId, createBlankSessionCookie } from "../lib/auth";
+import { generateId, createBlankRefreshTokenCookie, readRefreshTokenCookie } from "../lib/auth";
 import { hashPassword, verifyPassword } from "../utils/crypto";
 import { generateTOTPSecret, getTOTPUri, generateRecoveryKeys, hashRecoveryKey, verifyTOTP } from "../lib/totp";
 import { UserModel } from "../models/user";
@@ -29,7 +29,7 @@ export async function handleAccountRequest(request: Request, env: Env, user: Use
       const dbUser = await userModel.getById(user.id);
       return new Response(JSON.stringify({
         id: user.id,
-        username: user.username,
+        username: dbUser?.username || "",
         role: user.role,
         totp_enabled: !!(dbUser?.totp_enabled),
         totp_skip_password: !!(dbUser?.totp_skip_password),
@@ -103,8 +103,8 @@ export async function handleAccountRequest(request: Request, env: Env, user: Use
       const sessionModel = new SessionModel(env.DB);
       const sessions = await sessionModel.getSessionsByUser(user.id);
       
-      const { readSessionCookie } = await import("../lib/auth");
-      const currentSessionId = readSessionCookie(request.headers.get("Cookie"));
+      const cookieHeader = request.headers.get("Cookie") || "";
+      const currentSessionId = readRefreshTokenCookie(cookieHeader);
       
       const sessionData = sessions.map(s => ({
         ...s,
@@ -126,15 +126,15 @@ export async function handleAccountRequest(request: Request, env: Env, user: Use
         return new Response("Forbidden", { status: 403 });
       }
       
-      const { invalidateSession, readSessionCookie, createBlankSessionCookie } = await import("../lib/auth");
+      const { invalidateSession } = await import("../lib/auth");
       await invalidateSession(env, targetSessionId);
       await activityLog.record(user.id, 'session_revoked', clientIp, userAgent);
       
       // If revoking current session, clear cookie
-      const currentSessionId = readSessionCookie(request.headers.get("Cookie"));
+      const currentSessionId = readRefreshTokenCookie(request.headers.get("Cookie") || "");
       if (targetSessionId === currentSessionId) {
         return new Response(JSON.stringify({ success: true, is_current: true }), {
-          headers: { "Set-Cookie": createBlankSessionCookie(), "Content-Type": "application/json" }
+          headers: { "Set-Cookie": createBlankRefreshTokenCookie(), "Content-Type": "application/json" }
         });
       }
       
@@ -152,7 +152,7 @@ export async function handleAccountRequest(request: Request, env: Env, user: Use
         return new Response("TOTP is already enabled", { status: 409 });
       }
       const secret = generateTOTPSecret();
-      const uri = getTOTPUri(secret, user.username, 'ObexDNS');
+      const uri = getTOTPUri(secret, dbUser?.username || 'user', 'ObexDNS');
       return new Response(JSON.stringify({ secret, uri }), { headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -212,12 +212,15 @@ export async function handleAccountRequest(request: Request, env: Env, user: Use
     }
 
     // DELETE /api/account/me (delete account)
-    if (pathParts[2] === 'me' && request.method === 'DELETE') {
-      if (RBAC.isAdmin(user)) return new Response("Administrator accounts cannot be deleted directly", { status: 400 });
-      await profileModel.deleteByOwner(user.id);
+    if (pathParts[2] === 'delete' && request.method === 'POST') {
+      const { invalidateSession } = await import("../lib/auth");
+      const cookieHeader = request.headers.get("Cookie") || "";
+      const sessionId = readRefreshTokenCookie(cookieHeader);
+      if (sessionId) await invalidateSession(env, sessionId);
       await userModel.delete(user.id);
-      const blankCookie = createBlankSessionCookie();
-      return new Response(JSON.stringify({ success: true }), { headers: { "Set-Cookie": blankCookie } });
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { "Set-Cookie": createBlankRefreshTokenCookie(), "Content-Type": "application/json" }
+      });
     }
   }
 

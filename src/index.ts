@@ -1,7 +1,8 @@
 import { Context, Env, User, ExecutionContext } from './types';
 import { parseDNSQuery } from './utils/dns';
 import { pipeline } from './pipeline';
-import { readSessionCookie, validateSession, getRequestCoordinates, readCsrfCookie, createCsrfCookie, generateId } from './lib/auth';
+import { getRequestCoordinates, readCsrfCookie, createCsrfCookie, generateId, getOrCreateJwtSecret } from './lib/auth';
+import { importJwtSecret, verifyJWT } from './lib/jwt';
 import { handleAuthRequest } from './api/auth';
 import { handleProfilesRequest } from './api/profiles';
 import { handleAccountRequest } from './api/account';
@@ -51,12 +52,23 @@ export default {
 
       // 鉴权中间件逻辑 (仅对 /api 路由生效)
       if (url.pathname.startsWith('/api/')) {
-        const cookieHeader = request.headers.get("Cookie") || "";
-        const sessionId = readSessionCookie(cookieHeader);
-        if (sessionId) {
-          const { latitude, longitude } = getRequestCoordinates(request);
-          const { user } = await validateSession(env, sessionId, latitude, longitude);
-          if (user) currentUser = user as any;
+        const authHeader = request.headers.get("Authorization") || "";
+        let accessToken = "";
+        if (authHeader.startsWith("Bearer ")) {
+          accessToken = authHeader.slice(7);
+        }
+
+        if (accessToken) {
+          try {
+            const secret = await getOrCreateJwtSecret(env);
+            const jwtKey = await importJwtSecret(secret);
+            const payload = await verifyJWT<{userId: string, role: string, sessionId: string, exp: number}>(accessToken, jwtKey);
+            if (payload) {
+              // We only set id and role because the rest of the app relies primarily on these for API authorization.
+              // Note: `username` and other fields are omitted to avoid hitting the DB.
+              currentUser = { id: payload.userId, username: "", role: payload.role as any };
+            }
+          } catch (e) {}
         }
 
         const isAuthRoute = [
@@ -70,6 +82,7 @@ export default {
 
         // CSRF Double Submit Cookie check for mutations
         if (currentUser && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method) && !isAuthRoute) {
+          const cookieHeader = request.headers.get("Cookie") || "";
           const csrfCookie = readCsrfCookie(cookieHeader);
           const csrfHeader = request.headers.get("X-CSRF-Token");
           if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
