@@ -222,6 +222,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
         isDrawerOpen={isDrawerOpen}
         setIsDrawerOpen={setIsDrawerOpen}
         selectedLog={selectedLog}
+        profileId={profileId}
         isMobile={isMobile}
         onQuickAction={onQuickAction}
       />

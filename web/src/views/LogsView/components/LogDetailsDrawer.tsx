@@ -1,5 +1,5 @@
-import React from "react";
-import { Drawer, Position, Section, SectionCard, Tag, Intent, Button } from "@blueprintjs/core";
+import React, { useState, useEffect } from "react";
+import { Drawer, Position, Section, SectionCard, Tag, Intent, Button, Spinner } from "@blueprintjs/core";
 import { Activity, Globe, User, Edit3, ShieldCheck, ShieldAlert, ArrowRight, MapPin } from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
@@ -11,6 +11,7 @@ export interface LogDetailsDrawerProps {
   isDrawerOpen: boolean;
   setIsDrawerOpen: (open: boolean) => void;
   selectedLog: LogEntry | null;
+  profileId: string;
   isMobile: boolean;
   onQuickAction?: (domain: string, type: "ALLOW" | "BLOCK" | "REDIRECT", recordType?: string) => void;
 }
@@ -26,10 +27,44 @@ export const LogDetailsDrawer: React.FC<LogDetailsDrawerProps> = ({
   isDrawerOpen,
   setIsDrawerOpen,
   selectedLog,
+  profileId,
   isMobile,
   onQuickAction,
 }) => {
   const { t } = useTranslation();
+  const [detailedLog, setDetailedLog] = useState<LogEntry | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isDrawerOpen && selectedLog?.id) {
+      setLoading(true);
+      setDetailedLog(null);
+      
+      const controller = new AbortController();
+      fetch(`/api/profiles/${profileId}/logs/${selectedLog.id}`, { signal: controller.signal })
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch log details");
+          return res.json();
+        })
+        .then((data) => {
+          setDetailedLog(data);
+        })
+        .catch((err) => {
+          if (err.name !== "AbortError") {
+            console.error(err);
+          }
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+
+      return () => {
+        controller.abort();
+      };
+    } else {
+      setDetailedLog(null);
+    }
+  }, [isDrawerOpen, selectedLog?.id, profileId]);
 
   return (
     <Drawer
@@ -64,7 +99,16 @@ export const LogDetailsDrawer: React.FC<LogDetailsDrawerProps> = ({
                 />
                 <DetailItem label={t("logs.detailType")} value={selectedLog.record_type} />
                 <DetailItem label={t("logs.detailLatency")} value={selectedLog.latency ? `${selectedLog.latency} ms` : "-"} />
-                <DetailItem label={t("logs.detailProfile")} value={selectedLog.profile_name || selectedLog.client_ip} />
+                <DetailItem
+                  label={t("logs.detailProfile")}
+                  value={
+                    loading ? (
+                      <Spinner size={12} />
+                    ) : (
+                      detailedLog?.profile_name || detailedLog?.client_ip || "-"
+                    )
+                  }
+                />
                 <DetailItem label={t("logs.detailTime")} value={formatDateTime(new Date(selectedLog.timestamp * 1000))} />
                 <DetailItem
                   label={t("logs.detailStatus")}
@@ -74,13 +118,20 @@ export const LogDetailsDrawer: React.FC<LogDetailsDrawerProps> = ({
                     </Tag>
                   }
                 />
-                <DetailItem label={t("logs.detailUpstream")} value={selectedLog.upstream || "-"} />
+                <DetailItem
+                  label={t("logs.detailUpstream")}
+                  value={loading ? <Spinner size={12} /> : (detailedLog?.upstream || "-")}
+                />
                 <DetailItem label={t("logs.detailReason")} value={selectedLog.reason || t("logs.detailNoReason")} italic />
-                <DetailItem label={t("logs.detailECS")} value={selectedLog.ecs} italic />
+                <DetailItem
+                  label={t("logs.detailECS")}
+                  value={loading ? <Spinner size={12} /> : (detailedLog?.ecs || "-")}
+                  italic
+                />
               </div>
             </SectionCard>
           </Section>
-
+ 
           <Section title={t("logs.resolutionResult")} icon={<Globe size={16} />} className="shadow-none! rounded-lg!">
             <SectionCard>
               <div className="bg-gray-50 dark:bg-gray-800 p-3 font-mono text-xs break-all leading-relaxed rounded-lg">
@@ -92,39 +143,47 @@ export const LogDetailsDrawer: React.FC<LogDetailsDrawerProps> = ({
               </div>
             </SectionCard>
           </Section>
-
+ 
           <Section title={t("logs.networkDetails")} icon={<User size={16} />} className="shadow-none! rounded-lg!">
             <SectionCard>
               <div className="space-y-4">
                 <div>
                   <div className="text-[10px] uppercase font-bold opacity-50 mb-1">{t("logs.clientSource")}</div>
                   <div className="flex justify-between items-center">
-                    <span className="font-mono">{selectedLog.client_ip}</span>
+                    <span className="font-mono">
+                      {loading ? <Spinner size={12} /> : (detailedLog?.client_ip || "-")}
+                    </span>
                     <Tag minimal title={selectedLog.geo_country || "Unknown"}>
                       {getFlagEmoji(selectedLog.geo_country || "")}
                     </Tag>
                   </div>
                 </div>
-                {selectedLog.dest_geoip && (
-                  <div>
-                    <div className="text-[10px] uppercase font-bold opacity-50 mb-1">{t("logs.destination")}</div>
-                    {(() => {
-                      const geo = JSON.parse(selectedLog.dest_geoip!);
-                      return (
-                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                          <div className="flex items-start gap-3">
-                            <MapPin size={16} className="oklch(60.9% 0.126 221.723) mt-1" />
-                            <div>
-                              <div className="font-bold text-sm">
-                                {geo.city}, {geo.country}
+                {loading ? (
+                  <div className="flex items-center justify-center py-2">
+                    <Spinner size={16} />
+                  </div>
+                ) : (
+                  detailedLog?.dest_geoip && (
+                    <div>
+                      <div className="text-[10px] uppercase font-bold opacity-50 mb-1">{t("logs.destination")}</div>
+                      {(() => {
+                        const geo = JSON.parse(detailedLog.dest_geoip!);
+                        return (
+                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                            <div className="flex items-start gap-3">
+                              <MapPin size={16} className="oklch(60.9% 0.126 221.723) mt-1" />
+                              <div>
+                                <div className="font-bold text-sm">
+                                  {geo.city}, {geo.country}
+                                </div>
+                                <div className="text-xs opacity-70 mt-1">{geo.isp}</div>
                               </div>
-                              <div className="text-xs opacity-70 mt-1">{geo.isp}</div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
+                        );
+                      })()}
+                    </div>
+                  )
                 )}
               </div>
             </SectionCard>

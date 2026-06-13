@@ -28,17 +28,25 @@ export class LogModel {
   }
 
   async getLogs(profileId: string, options: { since: number, until: number, status?: string, search?: string, before?: number, limit?: number }): Promise<ResolutionLog[]> {
-    let queryStr = "SELECT l.*, p.name as profile_name FROM logs l JOIN profiles p ON l.profile_id = p.id WHERE l.profile_id = ? AND l.timestamp >= ? AND l.timestamp <= ?";
+    let queryStr = "SELECT id, timestamp, domain, action, record_type, latency, answer, geo_country, reason FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ?";
     let params: any[] = [profileId, options.since, options.until];
     
-    if (options.status) { queryStr += " AND l.action = ?"; params.push(options.status); }
-    if (options.search) { queryStr += " AND l.domain LIKE ?"; params.push(`%${options.search}%`); }
-    if (options.before) { queryStr += " AND l.timestamp < ?"; params.push(options.before); }
+    if (options.status) { queryStr += " AND action = ?"; params.push(options.status); }
+    if (options.search) { queryStr += " AND domain LIKE ?"; params.push(`%${options.search}%`); }
+    if (options.before) { queryStr += " AND timestamp < ?"; params.push(options.before); }
     
-    queryStr += ` ORDER BY l.timestamp DESC LIMIT ${options.limit || 50}`;
+    queryStr += ` ORDER BY timestamp DESC LIMIT ${options.limit || 50}`;
     
     const { results } = await this.db.prepare(queryStr).bind(...params).all<ResolutionLog>();
     return results;
+  }
+
+  async getLog(profileId: string, logId: number): Promise<ResolutionLog | null> {
+    return await this.db.prepare(
+      "SELECT l.*, p.name as profile_name FROM logs l JOIN profiles p ON l.profile_id = p.id WHERE l.profile_id = ? AND l.id = ?"
+    )
+      .bind(profileId, logId)
+      .first<ResolutionLog | null>();
   }
 
   async deleteByOwner(ownerId: string): Promise<boolean> {

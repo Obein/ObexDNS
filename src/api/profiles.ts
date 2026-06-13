@@ -134,6 +134,18 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
 
     // 子资源路由: /api/profiles/:id/logs
     if (pathParts[3] === 'logs' && request.method === 'GET') {
+      if (pathParts.length > 4) {
+        const logId = parseInt(pathParts[4], 10);
+        if (isNaN(logId)) {
+          return new Response("Invalid Log ID", { status: 400 });
+        }
+        const logDetail = await logModel.getLog(profileId, logId);
+        if (!logDetail) {
+          return new Response("Log Not Found", { status: 404 });
+        }
+        return new Response(JSON.stringify(logDetail), { headers: { 'Content-Type': 'application/json' } });
+      }
+
       const urlParams = new URL(request.url).searchParams;
       const range = urlParams.get('range') || '24h';
       const before = urlParams.get('before');
