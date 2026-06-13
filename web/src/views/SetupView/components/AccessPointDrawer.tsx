@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { Drawer, Position, Section, SectionCard, Button, Intent, Spinner, Dialog, Classes, InputGroup } from "@blueprintjs/core";
+import { Drawer, Position, Section, SectionCard, Button, Intent, Spinner, Dialog, Classes, InputGroup, Tooltip, Popover } from "@blueprintjs/core";
 import { Trash2, Edit2, RefreshCw, Plus, MonitorSmartphone, Copy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AccessPoint } from "../../../types/auth";
 import { formatDateTime } from "../../../utils/date";
+
+const AP_NAME_REGEX = /^[a-zA-Z0-9_-]{1,30}$/;
 
 export interface AccessPointDrawerProps {
   isOpen: boolean;
@@ -38,6 +40,12 @@ export const AccessPointDrawer: React.FC<AccessPointDrawerProps> = ({
 
   const [rotatingApId, setRotatingApId] = useState<string | null>(null);
   const [deletingApId, setDeletingApId] = useState<string | null>(null);
+
+  const [newApNameFocused, setNewApNameFocused] = useState(false);
+  const [renameApNameFocused, setRenameApNameFocused] = useState(false);
+  const [rotateConfirmApId, setRotateConfirmApId] = useState<string | null>(null);
+
+  const isValidApName = (name: string) => AP_NAME_REGEX.test(name);
 
   const handleAdd = async () => {
     if (!newApName.trim()) return;
@@ -182,13 +190,47 @@ export const AccessPointDrawer: React.FC<AccessPointDrawerProps> = ({
                         text={t("setup.renameAccessPoint")} 
                         onClick={() => { setRenameApId(ap.id); setRenameApName(ap.name); }}
                       />
-                      <Button 
-                        small 
-                        icon={<RefreshCw size={14} />} 
-                        text={t("setup.rotateToken")} 
-                        loading={rotatingApId === ap.id}
-                        onClick={() => handleRotate(ap.id)}
-                      />
+                      <Popover
+                        isOpen={rotateConfirmApId === ap.id}
+                        onInteraction={(nextOpenState) => {
+                          if (!nextOpenState) {
+                            setRotateConfirmApId(null);
+                          }
+                        }}
+                        content={
+                          <div className="p-4 space-y-3 dark:bg-gray-800 dark:text-white max-w-xs">
+                            <p className="text-xs font-semibold leading-relaxed">
+                              {t("setup.rotateTokenConfirmDesc", "Rotating the key will immediately disconnect devices using the old key. Are you sure you want to continue?")}
+                            </p>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                small
+                                minimal
+                                text={t("common.cancel", "Cancel")}
+                                onClick={() => setRotateConfirmApId(null)}
+                              />
+                              <Button
+                                small
+                                intent={Intent.DANGER}
+                                text={t("common.confirm", "Confirm")}
+                                onClick={() => {
+                                  setRotateConfirmApId(null);
+                                  handleRotate(ap.id);
+                                }}
+                              />
+                            </div>
+                          </div>
+                        }
+                        position={Position.TOP}
+                      >
+                        <Button 
+                          small 
+                          icon={<RefreshCw size={14} />} 
+                          text={t("setup.rotateToken")} 
+                          loading={rotatingApId === ap.id}
+                          onClick={() => setRotateConfirmApId(ap.id)}
+                        />
+                      </Popover>
                       <Button 
                         small 
                         intent={Intent.DANGER}
@@ -208,20 +250,32 @@ export const AccessPointDrawer: React.FC<AccessPointDrawerProps> = ({
         </div>
       </Drawer>
 
-      <Dialog isOpen={isAddDialogOpen} onClose={() => setIsAddDialogOpen(false)} title={t("setup.addAccessPoint")}>
+      <Dialog isOpen={isAddDialogOpen} onClose={() => { setIsAddDialogOpen(false); setNewApName(""); }} title={t("setup.addAccessPoint")}>
         <div className={Classes.DIALOG_BODY}>
-          <InputGroup
-            autoFocus
-            large
-            placeholder={t("setup.accessPointName")}
-            value={newApName}
-            onChange={(e) => setNewApName(e.target.value)}
-          />
+          <Tooltip
+            content={t("setup.accessPointNameFormatTip", "1-30 characters, letters, numbers, hyphens and underscores allowed")}
+            isOpen={newApNameFocused}
+            position={Position.TOP}
+            intent={Intent.PRIMARY}
+            className="w-full"
+          >
+            <div className="w-full block">
+              <InputGroup
+                autoFocus
+                large
+                placeholder={t("setup.accessPointName")}
+                value={newApName}
+                onChange={(e) => setNewApName(e.target.value)}
+                onFocus={() => setNewApNameFocused(true)}
+                onBlur={() => setNewApNameFocused(false)}
+              />
+            </div>
+          </Tooltip>
         </div>
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-            <Button onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-            <Button intent={Intent.PRIMARY} onClick={handleAdd} loading={isAdding} disabled={!newApName.trim()}>
+            <Button onClick={() => { setIsAddDialogOpen(false); setNewApName(""); }}>Cancel</Button>
+            <Button intent={Intent.PRIMARY} onClick={handleAdd} loading={isAdding} disabled={!isValidApName(newApName)}>
               {t("common.create")}
             </Button>
           </div>
@@ -230,18 +284,30 @@ export const AccessPointDrawer: React.FC<AccessPointDrawerProps> = ({
 
       <Dialog isOpen={!!renameApId} onClose={() => setRenameApId(null)} title={t("setup.renameAccessPoint")}>
         <div className={Classes.DIALOG_BODY}>
-          <InputGroup
-            autoFocus
-            large
-            placeholder={t("setup.accessPointName")}
-            value={renameApName}
-            onChange={(e) => setRenameApName(e.target.value)}
-          />
+          <Tooltip
+            content={t("setup.accessPointNameFormatTip", "1-30 characters, letters, numbers, hyphens and underscores allowed")}
+            isOpen={renameApNameFocused}
+            position={Position.TOP}
+            intent={Intent.PRIMARY}
+            className="w-full"
+          >
+            <div className="w-full block">
+              <InputGroup
+                autoFocus
+                large
+                placeholder={t("setup.accessPointName")}
+                value={renameApName}
+                onChange={(e) => setRenameApName(e.target.value)}
+                onFocus={() => setRenameApNameFocused(true)}
+                onBlur={() => setRenameApNameFocused(false)}
+              />
+            </div>
+          </Tooltip>
         </div>
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>
             <Button onClick={() => setRenameApId(null)}>Cancel</Button>
-            <Button intent={Intent.PRIMARY} onClick={handleRename} loading={isRenaming} disabled={!renameApName.trim()}>
+            <Button intent={Intent.PRIMARY} onClick={handleRename} loading={isRenaming} disabled={!isValidApName(renameApName)}>
               {t("common.save")}
             </Button>
           </div>

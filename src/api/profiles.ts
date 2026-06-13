@@ -8,6 +8,8 @@ import { ProfileModel } from "../models/profile";
 import { generateId } from "../lib/auth";
 import { isSafeUrl } from "../utils/validator";
 
+const AP_NAME_REGEX = /^[a-zA-Z0-9_-]{1,30}$/;
+
 export async function handleProfilesRequest(request: Request, env: Env, user: User | null, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const pathParts = url.pathname.split('/').filter(Boolean); // ['api', 'profiles', ':id', ...]
@@ -274,6 +276,7 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
         }
         const body = await request.json() as { name: string };
         if (!body.name) return new Response("Name is required", { status: 400 });
+        if (!AP_NAME_REGEX.test(body.name)) return new Response("Invalid Access Point name format", { status: 400 });
         const result = await profileModel.addAccessPoint(profileId, body.name);
         return new Response(JSON.stringify(result), { status: 201, headers: { 'Content-Type': 'application/json' } });
       }
@@ -281,6 +284,7 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
         const apId = pathParts[4];
         const body = await request.json() as { name: string };
         if (!body.name) return new Response("Name is required", { status: 400 });
+        if (!AP_NAME_REGEX.test(body.name)) return new Response("Invalid Access Point name format", { status: 400 });
         await profileModel.updateAccessPointName(apId, profileId, body.name);
         return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
       }
