@@ -68,7 +68,7 @@ export async function handleAuthRequest(request: Request, env: Env): Promise<Res
   // 检查用户名是否存在接口
   if (url.pathname === '/api/auth/check-username' && request.method === 'GET') {
     const username = url.searchParams.get('username') || '';
-    if (!/^[a-zA-Z0-9]{5,15}$/.test(username)) {
+    if (!/^[a-z_][a-z0-9_-]{4,31}$/.test(username)) {
       return new Response(JSON.stringify({ error: "Invalid username" }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     const exists = await userModel.getByUsername(username);
@@ -96,7 +96,7 @@ export async function handleAuthRequest(request: Request, env: Env): Promise<Res
         return new Response("Verification failed", { status: 400 });
       }
     }
-    if (!/^[a-zA-Z0-9]{5,15}$/.test(username)) return new Response("Invalid username", { status: 400 });
+    if (!/^[a-z_][a-z0-9_-]{4,31}$/.test(username)) return new Response("Invalid username", { status: 400 });
     if (!password || !PASSWORD_REGEX.test(password)) {
       return new Response("Password format error", { status: 400 });
     }

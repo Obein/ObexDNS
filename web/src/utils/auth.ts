@@ -9,7 +9,7 @@ declare global {
  * Username validation regular expression.
  * Requirements: 5-15 alphanumeric characters only.
  */
-export const USERNAME_REGEX = /^[a-zA-Z0-9]{5,15}$/;
+export const USERNAME_REGEX = /^[a-z_][a-z0-9_-]{4,31}$/;
 
 /**
  * Password validation regular expression.

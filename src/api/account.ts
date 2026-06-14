@@ -39,7 +39,7 @@ export async function handleAccountRequest(request: Request, env: Env, user: Use
     // PATCH /api/account/me (username update)
     if (pathParts[2] === 'me' && request.method === 'PATCH') {
       const { username: newUsername } = await request.json() as any;
-      if (!newUsername || !/^[a-zA-Z0-9]{5,15}$/.test(newUsername)) {
+      if (!newUsername || !/^[a-z_][a-z0-9_-]{4,31}$/.test(newUsername)) {
         return new Response("Username format error", { status: 400 });
       }
       try {
@@ -238,7 +238,7 @@ export async function handleAccountRequest(request: Request, env: Env, user: Use
       }
       if (request.method === 'POST') {
         const { username, password, role } = await request.json() as any;
-        if (!username || !/^[a-zA-Z0-9]{5,15}$/.test(username)) {
+        if (!username || !/^[a-z_][a-z0-9_-]{4,31}$/.test(username)) {
           return new Response("Invalid username format", { status: 400 });
         }
         if (!password || !PASSWORD_REGEX.test(password)) {
