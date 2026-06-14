@@ -102,6 +102,7 @@
     "deleteAccessPointConfirm": "确定要删除此接入点吗？",
     "manageAccessPoints": "管理接入点",
     "searchAccessPoints": "搜索接入点...",
+    "accessPointNameExists": "接入点名称已存在",
     "accessPointCreated": "接入点创建成功",
     "accessPointRenamed": "接入点重命名成功",
     "accessPointDeleted": "接入点删除成功",

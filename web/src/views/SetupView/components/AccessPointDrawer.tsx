@@ -56,19 +56,29 @@ export const AccessPointDrawer: React.FC<AccessPointDrawerProps> = ({
   const isValidApName = (name: string) => AP_NAME_REGEX.test(name);
 
   const handleAdd = async () => {
-    if (!newApName.trim()) return;
+    const trimmedName = newApName.trim();
+    if (!trimmedName) return;
+
+    if (accessPoints.some(ap => ap.name.toLowerCase() === trimmedName.toLowerCase())) {
+      toasterRef.current?.show({ message: t("setup.accessPointNameExists", "Access Point name already exists"), intent: Intent.DANGER });
+      return;
+    }
+
     setIsAdding(true);
     try {
       const res = await fetch(`/api/profiles/${profileId}/access_points`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newApName.trim() })
+        body: JSON.stringify({ name: trimmedName })
       });
       if (res.ok) {
         toasterRef.current?.show({ message: t("setup.accessPointCreated"), intent: Intent.SUCCESS });
         setIsAddDialogOpen(false);
         setNewApName("");
         onRefresh();
+      } else {
+        const errMsg = await res.text();
+        toasterRef.current?.show({ message: errMsg || "Failed to create access point", intent: Intent.DANGER });
       }
     } catch (e) {
       console.error(e);
@@ -78,18 +88,28 @@ export const AccessPointDrawer: React.FC<AccessPointDrawerProps> = ({
   };
 
   const handleRename = async () => {
-    if (!renameApName.trim() || !renameApId) return;
+    const trimmedName = renameApName.trim();
+    if (!trimmedName || !renameApId) return;
+
+    if (accessPoints.some(ap => ap.id !== renameApId && ap.name.toLowerCase() === trimmedName.toLowerCase())) {
+      toasterRef.current?.show({ message: t("setup.accessPointNameExists", "Access Point name already exists"), intent: Intent.DANGER });
+      return;
+    }
+
     setIsRenaming(true);
     try {
       const res = await fetch(`/api/profiles/${profileId}/access_points/${renameApId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: renameApName.trim() })
+        body: JSON.stringify({ name: trimmedName })
       });
       if (res.ok) {
         toasterRef.current?.show({ message: t("setup.accessPointRenamed"), intent: Intent.SUCCESS });
         setRenameApId(null);
         onRefresh();
+      } else {
+        const errMsg = await res.text();
+        toasterRef.current?.show({ message: errMsg || "Failed to rename access point", intent: Intent.DANGER });
       }
     } catch (e) {
       console.error(e);
