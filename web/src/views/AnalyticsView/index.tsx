@@ -159,7 +159,7 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
               value={accessPointIdFilter || ""}
               onChange={(e) => setAccessPointIdFilter(e.target.value || null)}
               options={[
-                { label: `All ${t("logs.filterAccessPoint")}s`, value: "" },
+                { label: `${t("logs.allAccessPoint")}`, value: "" },
                 ...accessPoints.map(ap => ({ label: ap.name, value: ap.id }))
               ]}
               minimal
