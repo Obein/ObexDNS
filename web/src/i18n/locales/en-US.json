@@ -5,6 +5,7 @@
     "selectProfile": "Select Profile",
     "add": "Add",
     "newProfileName": "New Profile Name...",
+    "profileNameFormatTip": "Profile Name tip: 1-30 characters, duplicates not allowed",
     "create": "Create",
     "welcome": "Welcome",
     "createProfileToStart": "Create a profile to get started.",

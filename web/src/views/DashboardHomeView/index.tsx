@@ -8,6 +8,8 @@ import {
   H3,
   InputGroup,
   Popover,
+  Tooltip,
+  Position,
 } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 import {
@@ -24,6 +26,8 @@ import LogoIcon from "../../assets/obex_cat_eye_logo-256.webp";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { preloadHeavyViews, preloadMainViews } from "../../routes/ProfileRoutes";
 import type { Profile } from "../../types/auth";
+
+const PROFILE_NAME_REGEX = /^[\p{L}\p{N}_ -]{1,30}$/u;
 
 interface DashboardHomeProps {
   profiles: Profile[];
@@ -58,6 +62,7 @@ export const DashboardHomeView = ({
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+  const [nameFocused, setNameFocused] = useState(false);
 
   useEffect(() => {
     preloadMainViews();
@@ -215,18 +220,31 @@ export const DashboardHomeView = ({
               className="mb-6 p-4 dark:bg-gray-900 dark:border-gray-800 rounded-xl"
             >
               <div className="flex items-center gap-2">
-                <InputGroup
-                  fill
-                  placeholder={t("common.newProfileName")}
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  autoFocus
-                />
+                <Tooltip
+                  content={t("common.profileNameFormatTip", "Profile Name tip: 1-30 characters, duplicates not allowed")}
+                  isOpen={nameFocused}
+                  position={Position.TOP}
+                  intent={Intent.PRIMARY}
+                  className="flex-1"
+                >
+                  <div className="w-full block">
+                    <InputGroup
+                      fill
+                      placeholder={t("common.newProfileName")}
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      onFocus={() => setNameFocused(true)}
+                      onBlur={() => setNameFocused(false)}
+                      autoFocus
+                    />
+                  </div>
+                </Tooltip>
                 <Button
                   intent={Intent.SUCCESS}
                   onClick={onCreate}
                   text={t("common.create")}
                   className="whitespace-nowrap"
+                  disabled={!PROFILE_NAME_REGEX.test(newName)}
                 />
                 <Button
                   variant="minimal"

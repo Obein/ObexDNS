@@ -5,6 +5,7 @@
     "selectProfile": "选择配置",
     "add": "添加",
     "newProfileName": "新配置名称...",
+    "profileNameFormatTip": "配置名称提示：1-30个字符，且不能与已有配置重名",
     "create": "创建",
     "welcome": "欢迎",
     "createProfileToStart": "创建一个配置以开始。",

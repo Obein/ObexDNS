@@ -1,8 +1,10 @@
-import React from "react";
-import { Button, InputGroup, Intent } from "@blueprintjs/core";
+import React, { useState } from "react";
+import { Button, InputGroup, Intent, Tooltip, Position } from "@blueprintjs/core";
 import { Download, Edit2, Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {  Profile  } from "../types";
+
+const PROFILE_NAME_REGEX = /^[\p{L}\p{N}_ -]{1,30}$/u;
 
 export interface SettingsHeaderProps {
   profile: Profile | null;
@@ -28,25 +30,44 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
   saving,
 }) => {
   const { t } = useTranslation();
+  const [nameFocused, setNameFocused] = useState(false);
 
   return (
     <div className="mb-6 flex justify-between items-center">
       <div className="flex flex-col justify-start">
         {isEditingName ? (
           <div className="flex items-center gap-2 mb-1">
-            <InputGroup
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") updateProfileName();
-                if (e.key === "Escape") {
-                  setIsEditingName(false);
-                  setEditName(profile?.name || "");
-                }
-              }}
+            <Tooltip
+              content={t("common.profileNameFormatTip", "Profile Name tip: 1-30 characters, duplicates not allowed")}
+              isOpen={nameFocused}
+              position={Position.TOP}
+              intent={Intent.PRIMARY}
+              className="flex-1"
+            >
+              <div className="w-full block">
+                <InputGroup
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onFocus={() => setNameFocused(true)}
+                  onBlur={() => setNameFocused(false)}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") updateProfileName();
+                    if (e.key === "Escape") {
+                      setIsEditingName(false);
+                      setEditName(profile?.name || "");
+                    }
+                  }}
+                />
+              </div>
+            </Tooltip>
+            <Button
+              icon={<Check size={16} />}
+              intent={Intent.SUCCESS}
+              minimal
+              onClick={updateProfileName}
+              disabled={!PROFILE_NAME_REGEX.test(editName)}
             />
-            <Button icon={<Check size={16} />} intent={Intent.SUCCESS} minimal onClick={updateProfileName} />
             <Button
               icon={<X size={16} />}
               minimal

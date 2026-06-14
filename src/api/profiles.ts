@@ -9,6 +9,7 @@ import { generateId } from "../lib/auth";
 import { isSafeUrl } from "../utils/validator";
 
 const AP_NAME_REGEX = /^[a-zA-Z0-9_-]{1,30}$/;
+const PROFILE_NAME_REGEX = /^[\p{L}\p{N}_ -]{1,30}$/u;
 
 export async function handleProfilesRequest(request: Request, env: Env, user: User | null, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
@@ -28,6 +29,10 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
     if (request.method === 'POST') {
       const body = await request.json() as { name: string };
       
+      if (!body.name || !PROFILE_NAME_REGEX.test(body.name)) {
+        return new Response("Invalid Profile Name format", { status: 400 });
+      }
+
       const existingProfiles = await profileModel.listByOwner(user.id);
       if (existingProfiles.length >= 10) return new Response("Profile limit exceeded (max 10)", { status: 400 });
 
@@ -70,7 +75,7 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
     // PATCH /api/profiles/:id (用于修改名称等基础信息)
     if (pathParts.length === 3 && request.method === 'PATCH') {
       const { name } = await request.json() as { name: string };
-      if (!name) return new Response("The name cannot be empty", { status: 400 });
+      if (!name || !PROFILE_NAME_REGEX.test(name)) return new Response("Invalid Profile Name format", { status: 400 });
       await profileModel.updateName(profileId, name);
       ctx.waitUntil(pipeline.clearCache(profileId));
       return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
