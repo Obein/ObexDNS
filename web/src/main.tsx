@@ -9,23 +9,6 @@ import { getAccessToken, setAccessToken } from "./utils/token";
 
 FocusStyleManager.onlyShowFocusOnTabs();
 
-let cachedLat: string | null = null;
-let cachedLon: string | null = null;
-
-// Request browser geolocation once on app load
-if (typeof window !== "undefined" && navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      cachedLat = position.coords.latitude.toString();
-      cachedLon = position.coords.longitude.toString();
-    },
-    (error) => {
-      console.warn("Geolocation access denied or failed:", error);
-    },
-    { enableHighAccuracy: true, timeout: 5000 }
-  );
-}
-
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
@@ -56,12 +39,6 @@ window.fetch = async function (input, init) {
   if (isApi) {
     init = init || {};
     const headers = new Headers(init.headers);
-
-    // Geolocation headers
-    if (cachedLat && cachedLon) {
-      headers.set("X-Client-Latitude", cachedLat);
-      headers.set("X-Client-Longitude", cachedLon);
-    }
 
     // CSRF double submit cookie header for mutations
     const method = init.method?.toUpperCase() || "GET";
