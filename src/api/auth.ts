@@ -274,11 +274,11 @@ export async function handleAuthRequest(request: Request, env: Env): Promise<Res
     if (!refreshToken) return new Response("Refresh token missing", { status: 401 });
 
     const { latitude, longitude } = getRequestCoordinates(request);
-    const { session, user, newRefreshToken } = await rotateSession(env, refreshToken, latitude, longitude);
+    const { session, user, newRefreshToken, reason } = await rotateSession(env, refreshToken, latitude, longitude);
 
     if (!session || !user || !newRefreshToken) {
       await cacheUtils.isRateLimited(cache, `refresh_fail:${clientIp}`, 100, 60);
-      return new Response(JSON.stringify({ error: "Invalid refresh token" }), { 
+      return new Response(JSON.stringify({ error: "Invalid refresh token", reason: reason || "unknown" }), { 
         status: 401,
         headers: {
           "Set-Cookie": createBlankRefreshTokenCookie(),

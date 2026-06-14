@@ -9,24 +9,8 @@ import { getAccessToken, setAccessToken } from "./utils/token";
 
 FocusStyleManager.onlyShowFocusOnTabs();
 
-let cachedLat: string | null = null;
-let cachedLon: string | null = null;
-
-// Request browser geolocation once on app load
-if (typeof window !== "undefined" && navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      cachedLat = position.coords.latitude.toString();
-      cachedLon = position.coords.longitude.toString();
-    },
-    (error) => {
-      console.warn("Geolocation access denied or failed:", error);
-    },
-    { enableHighAccuracy: true, timeout: 5000 }
-  );
-}
-
 let isRefreshing = false;
+let lastRefreshReason = "unknown";
 let refreshSubscribers: ((token: string) => void)[] = [];
 
 function subscribeTokenRefresh(cb: (token: string) => void) {
@@ -38,7 +22,7 @@ function onRefreshed(token: string) {
   refreshSubscribers = [];
 }
 
-// Global window.fetch interceptor to append client coordinates and CSRF headers to API requests
+// Global window.fetch interceptor to append CSRF headers to API requests
 const originalFetch = window.fetch;
 window.fetch = async function (input, init) {
   let url = "";
@@ -56,12 +40,6 @@ window.fetch = async function (input, init) {
   if (isApi) {
     init = init || {};
     const headers = new Headers(init.headers);
-
-    // Geolocation headers
-    if (cachedLat && cachedLon) {
-      headers.set("X-Client-Latitude", cachedLat);
-      headers.set("X-Client-Longitude", cachedLon);
-    }
 
     // CSRF double submit cookie header for mutations
     const method = init.method?.toUpperCase() || "GET";
@@ -95,14 +73,22 @@ window.fetch = async function (input, init) {
             onRefreshed(data.accessToken);
           } catch (e) {
             setAccessToken(null);
+            lastRefreshReason = "invalid_payload";
             onRefreshed("");
           }
         } else {
           setAccessToken(null);
+          let reason = "unknown";
+          try {
+            const data = await refreshRes.json();
+            if (data && data.reason) reason = data.reason;
+          } catch (e) {}
+          lastRefreshReason = reason;
           onRefreshed("");
         }
       }).catch(() => {
         setAccessToken(null);
+        lastRefreshReason = "network_error";
         onRefreshed("");
       }).finally(() => {
         isRefreshing = false;
@@ -118,8 +104,8 @@ window.fetch = async function (input, init) {
       headers.set("Authorization", `Bearer ${retryToken}`);
       response = await originalFetch(input, { ...init, headers });
     } else {
-      // Refresh failed, maybe dispatch a custom event to logout
-      window.dispatchEvent(new Event('auth_unauthorized'));
+      // Refresh failed, dispatch a custom event to logout with details
+      window.dispatchEvent(new CustomEvent('auth_unauthorized', { detail: { reason: lastRefreshReason } }));
     }
   }
 

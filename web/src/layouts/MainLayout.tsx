@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { OverlayToaster } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 import {
   Edit3,
@@ -40,8 +39,6 @@ interface MainLayoutProps {
   navigate: (path: string) => void;
   /** Callback to handle logouts. */
   handleLogout: () => void;
-  /** Ref hook to the BlueprintJS OverlayToaster container. */
-  toasterRef: React.MutableRefObject<OverlayToaster | null>;
   /** Current logged in user info. */
   currentUser: UserInfo | null;
 }
@@ -65,7 +62,6 @@ export const MainLayout = ({
   location,
   navigate,
   handleLogout,
-  toasterRef,
   currentUser,
 }: MainLayoutProps) => {
   const { profileId: urlProfileId } = useParams();
@@ -114,7 +110,6 @@ export const MainLayout = ({
 
   return (
     <div className="flex h-screen w-full bg-white dark:bg-gray-950 overflow-hidden flex-col md:flex-row">
-      <OverlayToaster position="bottom" ref={toasterRef} />
 
       {!isMobile && (
         <DesktopSidebar

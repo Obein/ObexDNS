@@ -70,7 +70,12 @@
     "usernameExists": "This username is already taken. Please try another one.",
     "skip": "Skip",
     "showPassword": "Show password",
-    "hidePassword": "Hide password"
+    "hidePassword": "Hide password",
+    "unauthorizedDefault": "Your session has ended. Please log in again.",
+    "unauthorizedGeo": "Session invalidated due to geographic location change (exceeded distance limit).",
+    "unauthorizedExpired": "Your session has expired. Please log in again.",
+    "unauthorizedReuse": "Security notice: Multiple logins detected. Session terminated.",
+    "unauthorizedRevoked": "Your session has been revoked or deleted. Please log in again."
   },
   "setup": {
     "title": "Setup Guide",
@@ -101,6 +106,8 @@
     "deleteAccessPoint": "Delete",
     "deleteAccessPointConfirm": "Are you sure you want to delete this access point?",
     "manageAccessPoints": "Manage Access Points",
+    "searchAccessPoints": "Search Access Points...",
+    "accessPointNameExists": "Access Point name already exists",
     "accessPointCreated": "Access Point created successfully",
     "accessPointRenamed": "Access Point renamed successfully",
     "accessPointDeleted": "Access Point deleted successfully",

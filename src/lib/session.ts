@@ -100,17 +100,17 @@ export async function rotateSession(
   refreshTokenString: string,
   currentLat: number | null = null,
   currentLon: number | null = null
-): Promise<{ session: Session | null; user: User | null; newRefreshToken: string | null }> {
+): Promise<{ session: Session | null; user: User | null; newRefreshToken: string | null; reason?: string }> {
   const parsed = parseRefreshTokenString(refreshTokenString);
   if (!parsed) {
-    return { session: null, user: null, newRefreshToken: null };
+    return { session: null, user: null, newRefreshToken: null, reason: "invalid_token" };
   }
 
   const sessionModel = new SessionModel(env.DB);
   const result = await sessionModel.getSessionWithUser(parsed.sid);
 
   if (!result) {
-    return { session: null, user: null, newRefreshToken: null };
+    return { session: null, user: null, newRefreshToken: null, reason: "session_not_found" };
   }
 
   const session: Session = {
@@ -135,13 +135,13 @@ export async function rotateSession(
   if (session.rotation_counter !== parsed.v) {
     // Token reuse detected. Terminate the session immediately.
     await invalidateSession(env, session.id);
-    return { session: null, user: null, newRefreshToken: null };
+    return { session: null, user: null, newRefreshToken: null, reason: "token_reuse" };
   }
 
   // Expiration check
   if (Math.floor(Date.now() / 1000) >= session.expires_at) {
     await invalidateSession(env, session.id);
-    return { session: null, user: null, newRefreshToken: null };
+    return { session: null, user: null, newRefreshToken: null, reason: "expired" };
   }
 
   // Strict Geolocation Check
@@ -151,14 +151,14 @@ export async function rotateSession(
     currentLat === null || currentLon === null
   ) {
     await invalidateSession(env, session.id);
-    return { session: null, user: null, newRefreshToken: null };
+    return { session: null, user: null, newRefreshToken: null, reason: "geolocation_missing" };
   }
 
   const distance = calculateDistanceInKm(session.latitude, session.longitude, currentLat, currentLon);
   const maxDistance = Number(env.SESSION_GEO_DISTANCE_KM) || 50;
   if (distance > maxDistance) {
     await invalidateSession(env, session.id);
-    return { session: null, user: null, newRefreshToken: null };
+    return { session: null, user: null, newRefreshToken: null, reason: "geolocation_mismatch" };
   }
 
   // Session extension (if close to expiration)

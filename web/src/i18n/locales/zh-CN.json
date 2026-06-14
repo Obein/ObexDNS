@@ -70,7 +70,12 @@
     "usernameExists": "该用户名已被注册，请尝试其他用户名。",
     "skip": "跳过",
     "showPassword": "显示密码",
-    "hidePassword": "隐藏密码"
+    "hidePassword": "隐藏密码",
+    "unauthorizedDefault": "您的登录会话已失效，请重新登录。",
+    "unauthorizedGeo": "检测到地理位置变更（超出距离限制），当前会话已被强制注销。",
+    "unauthorizedExpired": "您的登录已过期，请重新登录。",
+    "unauthorizedReuse": "安全警报：检测到重复登录，会话已终止。",
+    "unauthorizedRevoked": "您的会话已被注销或删除，请重新登录。"
   },
   "setup": {
     "title": "安装指南",
@@ -101,6 +106,8 @@
     "deleteAccessPoint": "删除",
     "deleteAccessPointConfirm": "确定要删除此接入点吗？",
     "manageAccessPoints": "管理接入点",
+    "searchAccessPoints": "搜索接入点...",
+    "accessPointNameExists": "接入点名称已存在",
     "accessPointCreated": "接入点创建成功",
     "accessPointRenamed": "接入点重命名成功",
     "accessPointDeleted": "接入点删除成功",

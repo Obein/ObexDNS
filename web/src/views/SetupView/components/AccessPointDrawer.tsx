@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Drawer, Position, Section, SectionCard, Button, Intent, Spinner, Dialog, Classes, InputGroup, Tooltip, Popover } from "@blueprintjs/core";
-import { Trash2, Edit2, RefreshCw, Plus, MonitorSmartphone, Copy } from "lucide-react";
+import { Trash2, Edit2, RefreshCw, Plus, MonitorSmartphone, Copy, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AccessPoint } from "../../../types/auth";
 import { formatDateTime } from "../../../utils/date";
@@ -45,22 +45,40 @@ export const AccessPointDrawer: React.FC<AccessPointDrawerProps> = ({
   const [renameApNameFocused, setRenameApNameFocused] = useState(false);
   const [rotateConfirmApId, setRotateConfirmApId] = useState<string | null>(null);
 
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredAccessPoints = accessPoints.filter(ap => 
+    ap.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    ap.token.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const isValidApName = (name: string) => AP_NAME_REGEX.test(name);
 
   const handleAdd = async () => {
-    if (!newApName.trim()) return;
+    const trimmedName = newApName.trim();
+    if (!trimmedName) return;
+
+    if (accessPoints.some(ap => ap.name.toLowerCase() === trimmedName.toLowerCase())) {
+      toasterRef.current?.show({ message: t("setup.accessPointNameExists", "Access Point name already exists"), intent: Intent.DANGER });
+      return;
+    }
+
     setIsAdding(true);
     try {
       const res = await fetch(`/api/profiles/${profileId}/access_points`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newApName.trim() })
+        body: JSON.stringify({ name: trimmedName })
       });
       if (res.ok) {
         toasterRef.current?.show({ message: t("setup.accessPointCreated"), intent: Intent.SUCCESS });
         setIsAddDialogOpen(false);
         setNewApName("");
         onRefresh();
+      } else {
+        const errMsg = await res.text();
+        toasterRef.current?.show({ message: errMsg || "Failed to create access point", intent: Intent.DANGER });
       }
     } catch (e) {
       console.error(e);
@@ -70,18 +88,28 @@ export const AccessPointDrawer: React.FC<AccessPointDrawerProps> = ({
   };
 
   const handleRename = async () => {
-    if (!renameApName.trim() || !renameApId) return;
+    const trimmedName = renameApName.trim();
+    if (!trimmedName || !renameApId) return;
+
+    if (accessPoints.some(ap => ap.id !== renameApId && ap.name.toLowerCase() === trimmedName.toLowerCase())) {
+      toasterRef.current?.show({ message: t("setup.accessPointNameExists", "Access Point name already exists"), intent: Intent.DANGER });
+      return;
+    }
+
     setIsRenaming(true);
     try {
       const res = await fetch(`/api/profiles/${profileId}/access_points/${renameApId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: renameApName.trim() })
+        body: JSON.stringify({ name: trimmedName })
       });
       if (res.ok) {
         toasterRef.current?.show({ message: t("setup.accessPointRenamed"), intent: Intent.SUCCESS });
         setRenameApId(null);
         onRefresh();
+      } else {
+        const errMsg = await res.text();
+        toasterRef.current?.show({ message: errMsg || "Failed to rename access point", intent: Intent.DANGER });
       }
     } catch (e) {
       console.error(e);
@@ -130,7 +158,23 @@ export const AccessPointDrawer: React.FC<AccessPointDrawerProps> = ({
       <Drawer
         isOpen={isOpen}
         onClose={onClose}
-        title={t("setup.manageAccessPoints")}
+        title={
+          isSearchOpen ? (
+            <InputGroup
+              leftIcon="search"
+              placeholder={t("setup.searchAccessPoints", "Search...")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              rightElement={<Button icon="cross" minimal onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }} />}
+              autoFocus
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <span>{t("setup.manageAccessPoints")}</span>
+              <Button icon={<Search size={14} />} minimal onClick={() => setIsSearchOpen(true)} className="opacity-50 hover:opacity-100" />
+            </div>
+          )
+        }
         icon="diagram-tree"
         position={Position.RIGHT}
         size={isMobile ? "100%" : "450px"}
@@ -150,7 +194,7 @@ export const AccessPointDrawer: React.FC<AccessPointDrawerProps> = ({
             <div className="flex justify-center p-8"><Spinner /></div>
           ) : (
             <div className="space-y-4 mt-4">
-              {accessPoints.map(ap => (
+              {filteredAccessPoints.map(ap => (
                 <Section key={ap.id} title={
                   <div className="flex items-center gap-2">
                     <MonitorSmartphone size={16} />

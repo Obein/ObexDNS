@@ -102,6 +102,41 @@ function App() {
     checkAuthAndFetchData();
   }, []);
 
+  useEffect(() => {
+    const handleUnauthorized = (e: Event) => {
+      setIsLoggedIn(false);
+      setSelectedProfile(null);
+      
+      const customEvent = e as CustomEvent<{ reason?: string }>;
+      const reason = customEvent.detail?.reason;
+      
+      let message = t("auth.unauthorizedDefault");
+      if (reason === "geolocation_mismatch" || reason === "geolocation_missing") {
+        message = t("auth.unauthorizedGeo");
+      } else if (reason === "expired") {
+        message = t("auth.unauthorizedExpired");
+      } else if (reason === "token_reuse") {
+        message = t("auth.unauthorizedReuse");
+      } else if (reason === "session_not_found") {
+        message = t("auth.unauthorizedRevoked");
+      }
+
+      if (toasterRef.current) {
+        toasterRef.current.show({
+          message,
+          intent: "danger",
+          icon: "error",
+          timeout: 5000,
+        });
+      }
+    };
+
+    window.addEventListener("auth_unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("auth_unauthorized", handleUnauthorized);
+    };
+  }, [t]);
+
   const handleCreateProfile = async () => {
     if (!newProfileName) return;
     try {
@@ -174,6 +209,7 @@ function App() {
           <html lang={i18n.language} />
         </Helmet>
         <GitHubCorner />
+        <OverlayToaster position="bottom" ref={toasterRef} />
         <AuthView onSuccess={checkAuthAndFetchData} />
       </Suspense>
     );
@@ -192,6 +228,7 @@ function App() {
         <html lang={i18n.language} />
       </Helmet>
       <GitHubCorner />
+      <OverlayToaster position="bottom" ref={toasterRef} />
       <Routes>
         <Route path="/" element={<Navigate to="/dash" replace />} />
         <Route
@@ -230,7 +267,6 @@ function App() {
               location={location}
               navigate={navigate}
               handleLogout={handleLogout}
-              toasterRef={toasterRef}
               currentUser={currentUser}
             >
               <ProfileRoutes
@@ -257,7 +293,6 @@ function App() {
               location={location}
               navigate={navigate}
               handleLogout={handleLogout}
-              toasterRef={toasterRef}
               currentUser={currentUser}
             >
               <AccountView />
