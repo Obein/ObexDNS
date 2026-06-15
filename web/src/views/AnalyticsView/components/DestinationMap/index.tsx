@@ -2,23 +2,17 @@ import React, { useState, useRef } from "react";
 import {
   ComposableMap,
   ZoomableGroup,
-  Geographies,
-  Geography,
   createCoordinates,
   createTranslateExtent,
 } from "@vnedyalk0v/react19-simple-maps";
-import { getFlagEmoji } from "../../utils";
-import { numericToAlpha2 } from "../../countryMapping";
 
 import { useMapData } from "./hooks/useMapData";
 import { ZoomControls } from "./components/ZoomControls";
 import { Legend } from "./components/Legend";
 import { MapTooltip } from "./components/MapTooltip";
-
-interface DestinationItem {
-  dest_geoip: string;
-  count: number;
-}
+import { MapGeographies } from "./components/MapGeographies";
+import { MapMarkers } from "./components/MapMarkers";
+import type { DestinationItem, HoveredCountry } from "./types";
 
 interface DestinationMapProps {
   destinations: DestinationItem[];
@@ -34,14 +28,7 @@ export const DestinationMap: React.FC<DestinationMapProps> = ({ destinations }) 
   } = useMapData(destinations);
 
   const [position, setPosition] = useState({ coordinates: createCoordinates(0, 0), zoom: 1 });
-  const [hoveredCountry, setHoveredCountry] = useState<{
-    name: string;
-    code: string;
-    count: number;
-    flag: string;
-    x: number;
-    y: number;
-  } | null>(null);
+  const [hoveredCountry, setHoveredCountry] = useState<HoveredCountry | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -93,88 +80,20 @@ export const DestinationMap: React.FC<DestinationMapProps> = ({ destinations }) 
             enablePan={true}
             translateExtent={bounds}
           >
-            {geographyData && (
-              <Geographies geography={geographyData}>
-                {({ geographies }) =>
-                  geographies.map((geo) => {
-                    const countryCode = numericToAlpha2[geo.id];
-                    const dest = countryCode ? destinationMap[countryCode] : null;
-                    const count = dest?.count || 0;
-                    const fillLevel = getLevel(count);
+            <MapGeographies
+              geographyData={geographyData}
+              destinationMap={destinationMap}
+              getLevel={getLevel}
+              containerRef={containerRef}
+              setHoveredCountry={setHoveredCountry}
+            />
 
-                    return (
-                      <Geography
-                        key={geo.rsmKey}
-                        geography={geo}
-                        onMouseEnter={(event) => {
-                          if (!countryCode) return;
-                          const name = dest?.name || geo.properties.name;
-                          const flag = getFlagEmoji(countryCode);
-                          const containerRect = containerRef.current?.getBoundingClientRect();
-                          const x = event.clientX - (containerRect?.left || 0);
-                          const y = event.clientY - (containerRect?.top || 0) - 15;
-                          setHoveredCountry({
-                            name,
-                            code: countryCode,
-                            count,
-                            flag,
-                            x,
-                            y,
-                          });
-                        }}
-                        onMouseMove={(event) => {
-                          const containerRect = containerRef.current?.getBoundingClientRect();
-                          const x = event.clientX - (containerRect?.left || 0);
-                          const y = event.clientY - (containerRect?.top || 0) - 15;
-                          setHoveredCountry((prev) => (prev ? { ...prev, x, y } : null));
-                        }}
-                        onMouseLeave={() => {
-                          setHoveredCountry(null);
-                        }}
-                        onClick={(event) => {
-                          if (!countryCode) return;
-                          const name = dest?.name || geo.properties.name;
-                          const flag = getFlagEmoji(countryCode);
-                          const containerRect = containerRef.current?.getBoundingClientRect();
-                          const x = event.clientX - (containerRect?.left || 0);
-                          const y = event.clientY - (containerRect?.top || 0) - 15;
-                          setHoveredCountry({
-                            name,
-                            code: countryCode,
-                            count,
-                            flag,
-                            x,
-                            y,
-                          });
-                        }}
-                        style={{
-                          default: {
-                            fill: `var(--map-color-${fillLevel})`,
-                            stroke: "var(--map-stroke)",
-                            strokeWidth: 0.5,
-                            outline: "none",
-                            transition: "fill 250ms, stroke 250ms",
-                          },
-                          hover: {
-                            fill: "var(--map-hover)",
-                            stroke: "var(--map-stroke)",
-                            strokeWidth: 0.5,
-                            outline: "none",
-                            cursor: "pointer",
-                          },
-                          pressed: {
-                            fill: "var(--map-hover)",
-                            stroke: "var(--map-stroke)",
-                            strokeWidth: 0.5,
-                            outline: "none",
-                          },
-                        }}
-                      />
-                    );
-                  })
-                }
-              </Geographies>
-            )}
+            <MapMarkers
+              destinationMap={destinationMap}
+              getLevel={getLevel}
+              containerRef={containerRef}
+              setHoveredCountry={setHoveredCountry}
+            />
           </ZoomableGroup>
         </ComposableMap>
 
