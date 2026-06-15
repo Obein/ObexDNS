@@ -23,6 +23,7 @@ interface MapMarkersProps {
   destinationMap: Record<string, CountryMapData>;
   getLevel: (count: number) => number;
   containerRef: React.RefObject<HTMLDivElement | null>;
+  hoveredCountry: HoveredCountry | null;
   setHoveredCountry: React.Dispatch<React.SetStateAction<HoveredCountry | null>>;
 }
 
@@ -30,6 +31,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
   destinationMap,
   getLevel,
   containerRef,
+  hoveredCountry,
   setHoveredCountry,
 }) => {
   return (
@@ -42,6 +44,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
         const r = isQueryActive ? 4 : 1.5;
 
         const updateHovered = (event: React.MouseEvent<SVGElement>) => {
+          if (hoveredCountry?.isPinned) return;
           const name = dest?.name || config.name;
           const flag = getFlagEmoji(code);
           const containerRect = containerRef.current?.getBoundingClientRect();
@@ -57,21 +60,48 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
           });
         };
 
+        const handleMarkerClick = (event: React.MouseEvent<SVGElement>) => {
+          const name = dest?.name || config.name;
+          const flag = getFlagEmoji(code);
+          const containerRect = containerRef.current?.getBoundingClientRect();
+          const x = event.clientX - (containerRect?.left || 0);
+          const y = event.clientY - (containerRect?.top || 0) - 15;
+          
+          setHoveredCountry((prev) => {
+            // Toggle pin if clicked same country
+            if (prev?.code === code && prev?.isPinned) {
+              return null; // Unpin
+            }
+            return {
+              name,
+              code,
+              count,
+              flag,
+              x,
+              y,
+              isPinned: true
+            };
+          });
+        };
+
         return (
           <Marker
             key={code}
             coordinates={createCoordinates(config.coordinates[0], config.coordinates[1])}
             onMouseEnter={updateHovered}
             onMouseMove={(event) => {
-              const containerRect = containerRef.current?.getBoundingClientRect();
-              const x = event.clientX - (containerRect?.left || 0);
-              const y = event.clientY - (containerRect?.top || 0) - 15;
-              setHoveredCountry((prev) => (prev ? { ...prev, x, y } : null));
+              setHoveredCountry((prev) => {
+                if (prev?.isPinned) return prev;
+                const containerRect = containerRef.current?.getBoundingClientRect();
+                const x = event.clientX - (containerRect?.left || 0);
+                const y = event.clientY - (containerRect?.top || 0) - 15;
+                return prev ? { ...prev, x, y } : null;
+              });
             }}
             onMouseLeave={() => {
-              setHoveredCountry(null);
+              setHoveredCountry((prev) => (prev?.isPinned ? prev : null));
             }}
-            onClick={updateHovered}
+            onClick={handleMarkerClick}
           >
             {isQueryActive ? (
               <>

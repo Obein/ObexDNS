@@ -17,4 +17,5 @@ export interface HoveredCountry {
   flag: string;
   x: number;
   y: number;
+  isPinned?: boolean;
 }

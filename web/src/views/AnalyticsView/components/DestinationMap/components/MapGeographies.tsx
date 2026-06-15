@@ -9,6 +9,7 @@ interface MapGeographiesProps {
   destinationMap: Record<string, CountryMapData>;
   getLevel: (count: number) => number;
   containerRef: React.RefObject<HTMLDivElement | null>;
+  hoveredCountry: HoveredCountry | null;
   setHoveredCountry: React.Dispatch<React.SetStateAction<HoveredCountry | null>>;
 }
 
@@ -17,6 +18,7 @@ export const MapGeographies: React.FC<MapGeographiesProps> = ({
   destinationMap,
   getLevel,
   containerRef,
+  hoveredCountry,
   setHoveredCountry,
 }) => {
   if (!geographyData) return null;
@@ -31,7 +33,7 @@ export const MapGeographies: React.FC<MapGeographiesProps> = ({
           const fillLevel = getLevel(count);
 
           const updateHovered = (event: React.MouseEvent<SVGPathElement>) => {
-            if (!countryCode) return;
+            if (!countryCode || hoveredCountry?.isPinned) return;
             const name = dest?.name || geo.properties.name;
             const flag = getFlagEmoji(countryCode);
             const containerRect = containerRef.current?.getBoundingClientRect();
@@ -47,21 +49,49 @@ export const MapGeographies: React.FC<MapGeographiesProps> = ({
             });
           };
 
+          const handleGeographyClick = (event: React.MouseEvent<SVGPathElement>) => {
+            if (!countryCode) return;
+            const name = dest?.name || geo.properties.name;
+            const flag = getFlagEmoji(countryCode);
+            const containerRect = containerRef.current?.getBoundingClientRect();
+            const x = event.clientX - (containerRect?.left || 0);
+            const y = event.clientY - (containerRect?.top || 0) - 15;
+            
+            setHoveredCountry((prev) => {
+              // Toggle pin if clicked same country
+              if (prev?.code === countryCode && prev?.isPinned) {
+                return null; // Unpin
+              }
+              return {
+                name,
+                code: countryCode,
+                count,
+                flag,
+                x,
+                y,
+                isPinned: true
+              };
+            });
+          };
+
           return (
             <Geography
               key={geo.rsmKey}
               geography={geo}
               onMouseEnter={updateHovered}
               onMouseMove={(event) => {
-                const containerRect = containerRef.current?.getBoundingClientRect();
-                const x = event.clientX - (containerRect?.left || 0);
-                const y = event.clientY - (containerRect?.top || 0) - 15;
-                setHoveredCountry((prev) => (prev ? { ...prev, x, y } : null));
+                setHoveredCountry((prev) => {
+                  if (prev?.isPinned) return prev;
+                  const containerRect = containerRef.current?.getBoundingClientRect();
+                  const x = event.clientX - (containerRect?.left || 0);
+                  const y = event.clientY - (containerRect?.top || 0) - 15;
+                  return prev ? { ...prev, x, y } : null;
+                });
               }}
               onMouseLeave={() => {
-                setHoveredCountry(null);
+                setHoveredCountry((prev) => (prev?.isPinned ? prev : null));
               }}
-              onClick={updateHovered}
+              onClick={handleGeographyClick}
               style={{
                 default: {
                   fill: `var(--map-color-${fillLevel})`,

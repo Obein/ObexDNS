@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 
 interface MapTooltipProps {
   name: string;
@@ -14,6 +15,8 @@ interface MapTooltipProps {
   accessPointId?: string;
   ispCache: Record<string, { name: string; count: number }[]>;
   onCacheIsp: (countryCode: string, isps: { name: string; count: number }[]) => void;
+  isPinned: boolean;
+  onClose: () => void;
 }
 
 export const MapTooltip: React.FC<MapTooltipProps> = ({
@@ -29,6 +32,8 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({
   accessPointId,
   ispCache,
   onCacheIsp,
+  isPinned,
+  onClose,
 }) => {
   const { t } = useTranslation();
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -117,13 +122,27 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({
   return (
     <div
       ref={tooltipRef}
-      className="absolute pointer-events-none bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-xl border border-gray-200/50 dark:border-slate-800/50 text-xs z-50 flex flex-col gap-1 transition-all duration-75 text-gray-900 dark:text-gray-100"
+      className={`absolute bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-xl border border-gray-200/50 dark:border-slate-800/50 text-xs z-50 flex flex-col gap-1 transition-all duration-75 text-gray-900 dark:text-gray-100 ${
+        isPinned ? "pointer-events-auto cursor-default pr-6" : "pointer-events-none"
+      }`}
       style={{
         left: `${coords.left}px`,
         top: `${coords.top}px`,
         transform: coords.alignBottom ? "translate(-50%, 0)" : "translate(-50%, -100%)",
       }}
     >
+      {isPinned && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5 rounded transition-colors cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800"
+          title={t("common.close", "Close")}
+        >
+          <X size={12} />
+        </button>
+      )}
       <div className="flex items-center gap-1.5 font-semibold whitespace-nowrap">
         <span className="text-sm">{flag}</span>
         <span>{name}</span>
@@ -146,8 +165,12 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({
             <div className="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 tracking-wider">
               {t("analytics.topIsps", "Top ISPs")}
             </div>
-            <div className="flex flex-col gap-0.5 min-w-36 max-w-48">
-              {isps.map((isp) => (
+            <div
+              className={`flex flex-col gap-0.5 min-w-36 max-w-48 ${
+                isPinned ? "max-h-36 overflow-y-auto pr-1" : ""
+              }`}
+            >
+              {(isPinned ? isps.slice(0, 15) : isps.slice(0, 3)).map((isp) => (
                 <div key={isp.name} className="flex justify-between gap-3 text-[11px] text-gray-600 dark:text-gray-300">
                   <span className="truncate" title={isp.name}>{isp.name}</span>
                   <span className="font-mono text-gray-400 dark:text-gray-500">{isp.count.toLocaleString()}</span>

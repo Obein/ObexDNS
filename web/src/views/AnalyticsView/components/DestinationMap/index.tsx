@@ -108,6 +108,7 @@ export const DestinationMap: React.FC<DestinationMapProps> = ({
               destinationMap={destinationMap}
               getLevel={getLevel}
               containerRef={containerRef}
+              hoveredCountry={hoveredCountry}
               setHoveredCountry={setHoveredCountry}
             />
 
@@ -115,6 +116,7 @@ export const DestinationMap: React.FC<DestinationMapProps> = ({
               destinationMap={destinationMap}
               getLevel={getLevel}
               containerRef={containerRef}
+              hoveredCountry={hoveredCountry}
               setHoveredCountry={setHoveredCountry}
             />
           </ZoomableGroup>
@@ -135,6 +137,8 @@ export const DestinationMap: React.FC<DestinationMapProps> = ({
             accessPointId={accessPointId}
             ispCache={ispCache}
             onCacheIsp={handleCacheIsp}
+            isPinned={hoveredCountry.isPinned || false}
+            onClose={() => setHoveredCountry(null)}
           />
         )}
       </div>
