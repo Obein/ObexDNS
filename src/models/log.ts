@@ -142,7 +142,7 @@ export class LogModel {
     let queryStr = "SELECT client_ip, geo_country, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ?";
     let params: any[] = [profileId, since, until];
     if (accessPointId) { queryStr += " AND access_point_id = ?"; params.push(accessPointId); }
-    queryStr += " GROUP BY client_ip, geo_country ORDER BY count DESC LIMIT 10";
+    queryStr += " GROUP BY client_ip, geo_country ORDER BY count DESC LIMIT 20";
     const { results } = await this.db.prepare(queryStr).bind(...params).all<{ client_ip: string, geo_country: string | null, count: number }>();
     return results;
   }

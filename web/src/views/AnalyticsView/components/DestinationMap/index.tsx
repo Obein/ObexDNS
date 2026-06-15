@@ -132,7 +132,7 @@ export const DestinationMap: React.FC<DestinationMapProps> = ({
         <ComposableMap
           projection="geoEqualEarth"
           width={800}
-          height={400}
+          height={566}
           style={{ width: "100%", height: "100%" }}
         >
           <ZoomableGroup
