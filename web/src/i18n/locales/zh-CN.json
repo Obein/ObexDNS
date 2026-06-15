@@ -215,7 +215,9 @@
     "destinationDistribution": "流量目的地分布",
     "requests": "请求",
     "topIsps": "主要运营商",
-    "pressToShowMore": "按下显示更多"
+    "pressToShowMore": "按下显示更多",
+    "maximize": "放大",
+    "minimize": "缩小"
   },
   "logs": {
     "title": "查询日志",
