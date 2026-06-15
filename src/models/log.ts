@@ -147,7 +147,7 @@ export class LogModel {
     return results;
   }
 
-  async getDestinations(profileId: string, since: number, until: number, accessPointId?: string) {
+  async getDestinations(profileId: string, since: number, until: number, accessPointId?: string, limit: number = 100) {
     let queryStr = `
       SELECT 
         json_extract(dest_geoip, '$.country_code') as country_code,
@@ -158,12 +158,12 @@ export class LogModel {
     `;
     let params: any[] = [profileId, since, until];
     if (accessPointId) { queryStr += " AND access_point_id = ?"; params.push(accessPointId); }
-    queryStr += " GROUP BY country_code ORDER BY count DESC LIMIT 100";
+    queryStr += ` GROUP BY country_code ORDER BY count DESC LIMIT ${limit}`;
     const { results } = await this.db.prepare(queryStr).bind(...params).all<{ country_code: string, country: string, count: number }>();
     return results;
   }
 
-  async getISPByCountry(profileId: string, countryCode: string, since: number, until: number, accessPointId?: string) {
+  async getISPByCountry(profileId: string, countryCode: string, since: number, until: number, accessPointId?: string, limit: number = 50) {
     let queryStr = `
       SELECT 
         json_extract(dest_geoip, '$.isp') as name, 
@@ -177,7 +177,7 @@ export class LogModel {
     `;
     let params: any[] = [profileId, since, until, countryCode.toUpperCase()];
     if (accessPointId) { queryStr += " AND access_point_id = ?"; params.push(accessPointId); }
-    queryStr += " GROUP BY name ORDER BY count DESC LIMIT 10";
+    queryStr += ` GROUP BY name ORDER BY count DESC LIMIT ${limit}`;
     const { results } = await this.db.prepare(queryStr).bind(...params).all<{ name: string | null, count: number }>();
     return results.map(r => ({
       name: r.name || "Unknown",

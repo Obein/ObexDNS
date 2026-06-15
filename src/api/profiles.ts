@@ -236,13 +236,17 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
           return new Response(JSON.stringify(clients), { headers: { 'Content-Type': 'application/json' } });
         }
         if (subResource === 'destinations') {
-          const destinations = await logModel.getDestinations(profileId, since, until, accessPointId);
+          const limitParam = urlParams.get('limit');
+          const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+          const destinations = await logModel.getDestinations(profileId, since, until, accessPointId, limit !== undefined && !isNaN(limit) ? limit : undefined);
           return new Response(JSON.stringify(destinations), { headers: { 'Content-Type': 'application/json' } });
         }
         if (subResource === 'isps') {
           const countryCode = urlParams.get('country_code');
           if (!countryCode) return new Response("country_code is required", { status: 400 });
-          const isps = await logModel.getISPByCountry(profileId, countryCode, since, until, accessPointId);
+          const limitParam = urlParams.get('limit');
+          const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+          const isps = await logModel.getISPByCountry(profileId, countryCode, since, until, accessPointId, limit !== undefined && !isNaN(limit) ? limit : undefined);
           return new Response(JSON.stringify(isps), { headers: { 'Content-Type': 'application/json' } });
         }
         return new Response("Not Found", { status: 404 });
