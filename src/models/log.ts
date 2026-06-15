@@ -151,7 +151,7 @@ export class LogModel {
     let queryStr = "SELECT dest_geoip, COUNT(*) as count FROM logs WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ? AND dest_geoip IS NOT NULL";
     let params: any[] = [profileId, since, until];
     if (accessPointId) { queryStr += " AND access_point_id = ?"; params.push(accessPointId); }
-    queryStr += " GROUP BY dest_geoip ORDER BY count DESC LIMIT 10";
+    queryStr += " GROUP BY dest_geoip ORDER BY count DESC LIMIT 100";
     const { results } = await this.db.prepare(queryStr).bind(...params).all<{ dest_geoip: string, count: number }>();
     return results;
   }
