@@ -15,7 +15,7 @@ import {
   InputGroup,
   HTMLSelect,
 } from "@blueprintjs/core";
-import { Shield, ShieldAlert, Zap, Globe, MapPin, Calendar, RotateCcw } from "lucide-react";
+import { Shield, ShieldAlert, Zap, Globe, MapPin, Calendar, RotateCcw, Maximize2, Minimize2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type {  AnalyticsData, TimeRange  } from "./types";
@@ -34,6 +34,7 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
   const [accessPointIdFilter, setAccessPointIdFilter] = useState<string | null>(null);
   const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([]);
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   useEffect(() => {
     fetch(`/api/profiles/${profileId}/access_points`)
@@ -195,7 +196,7 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
       </div>
 
       {/* Geolocation & Destinations */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={`grid gap-6 ${isMapExpanded ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"}`}>
         <Section title={t("analytics.clientActivity")} icon={<Globe size={16} />}>
           <HTMLTable striped className="w-full mt-2">
             <thead>
@@ -219,7 +220,18 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
           </HTMLTable>
         </Section>
 
-        <Section title={t("analytics.destinationDistribution")} icon={<MapPin size={16} />}>
+        <Section
+          title={t("analytics.destinationDistribution")}
+          icon={<MapPin size={16} />}
+          rightElement={
+            <Button
+              icon={isMapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              minimal
+              onClick={() => setIsMapExpanded(!isMapExpanded)}
+              title={isMapExpanded ? t("analytics.minimize", "Minimize") : t("analytics.maximize", "Maximize")}
+            />
+          }
+        >
           <DestinationMap
             destinations={data?.destinations || []}
             profileId={profileId || ""}

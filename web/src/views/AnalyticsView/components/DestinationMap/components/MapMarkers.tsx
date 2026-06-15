@@ -61,6 +61,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
         };
 
         const handleMarkerClick = (event: React.MouseEvent<SVGElement>) => {
+          event.stopPropagation();
           const name = dest?.name || config.name;
           const flag = getFlagEmoji(code);
           const containerRect = containerRef.current?.getBoundingClientRect();
