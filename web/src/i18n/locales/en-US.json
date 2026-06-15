@@ -214,7 +214,8 @@
     "queries": "Queries",
     "destinationDistribution": "Destination Distribution",
     "requests": "Requests",
-    "topIsps": "Top ISPs"
+    "topIsps": "Top ISPs",
+    "pressToShowMore": "Press to show more"
   },
   "logs": {
     "title": "Query Logs",

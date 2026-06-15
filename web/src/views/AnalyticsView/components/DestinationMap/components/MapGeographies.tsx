@@ -50,6 +50,7 @@ export const MapGeographies: React.FC<MapGeographiesProps> = ({
           };
 
           const handleGeographyClick = (event: React.MouseEvent<SVGPathElement>) => {
+            event.stopPropagation();
             if (!countryCode) return;
             const name = dest?.name || geo.properties.name;
             const flag = getFlagEmoji(countryCode);

@@ -214,7 +214,8 @@
     "queries": "查詢數",
     "destinationDistribution": "流量目的地分佈",
     "requests": "請求",
-    "topIsps": "主要營運商"
+    "topIsps": "主要營運商",
+    "pressToShowMore": "按下顯示更多"
   },
   "logs": {
     "title": "查詢日誌",
