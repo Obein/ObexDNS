@@ -88,6 +88,27 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({
     return () => controller.abort();
   }, [countryCode, profileId, range, customRange, accessPointId, count]);
 
+  useEffect(() => {
+    if (!isPinned) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
+        const target = e.target as HTMLElement;
+        const isGeography = target.classList.contains("rsm-geography") || target.closest(".rsm-geography");
+        const isMarker = target.classList.contains("map-marker-circle") || target.closest(".map-marker-circle");
+        if (!isGeography && !isMarker) {
+          onClose();
+        }
+      }
+    };
+    const timer = setTimeout(() => {
+      document.addEventListener("click", handleOutsideClick, true);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("click", handleOutsideClick, true);
+    };
+  }, [isPinned, onClose]);
+
   useLayoutEffect(() => {
     if (!tooltipRef.current) return;
     const rect = tooltipRef.current.getBoundingClientRect();
