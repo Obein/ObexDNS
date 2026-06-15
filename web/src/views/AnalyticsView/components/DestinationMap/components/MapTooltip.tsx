@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 
 interface MapTooltipProps {
   name: string;
@@ -152,12 +153,28 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({
         transform: coords.alignBottom ? "translate(-50%, 0)" : "translate(-50%, -100%)",
       }}
     >
-      <div className="flex items-center gap-1.5 font-semibold whitespace-nowrap">
-        <span className="text-sm">{flag}</span>
-        <span>{name}</span>
-      </div>
-      <div className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
-        {count.toLocaleString()} {t("analytics.queries")}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5 font-semibold whitespace-nowrap">
+            <span className="text-sm">{flag}</span>
+            <span>{name}</span>
+          </div>
+          <div className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
+            {count.toLocaleString()} {t("analytics.queries")}
+          </div>
+        </div>
+        {isPinned && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="flex items-center justify-center p-2 rounded-lg border border-gray-200 dark:border-slate-800 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 dark:hover:border-red-900/50 transition-colors cursor-pointer self-stretch aspect-square"
+            title={t("common.close", "Close")}
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
       {loading ? (
         <div className="mt-1.5 pt-1.5 border-t border-gray-150 dark:border-slate-850 flex flex-col gap-1 min-w-36">
