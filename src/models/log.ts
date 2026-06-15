@@ -152,7 +152,7 @@ export class LogModel {
       SELECT 
         json_extract(dest_geoip, '$.country_code') as country_code,
         json_extract(dest_geoip, '$.country') as country,
-        SUM(count) as count
+        COUNT(*) as count
       FROM logs 
       WHERE profile_id = ? AND timestamp >= ? AND timestamp <= ? AND dest_geoip IS NOT NULL
     `;
@@ -167,7 +167,7 @@ export class LogModel {
     let queryStr = `
       SELECT 
         json_extract(dest_geoip, '$.isp') as name, 
-        SUM(count) as count 
+        COUNT(*) as count 
       FROM logs 
       WHERE profile_id = ? 
         AND timestamp >= ? 
@@ -177,7 +177,7 @@ export class LogModel {
     `;
     let params: any[] = [profileId, since, until, countryCode.toUpperCase()];
     if (accessPointId) { queryStr += " AND access_point_id = ?"; params.push(accessPointId); }
-    queryStr += " GROUP BY name ORDER BY count DESC LIMIT 5";
+    queryStr += " GROUP BY name ORDER BY count DESC LIMIT 10";
     const { results } = await this.db.prepare(queryStr).bind(...params).all<{ name: string | null, count: number }>();
     return results.map(r => ({
       name: r.name || "Unknown",
