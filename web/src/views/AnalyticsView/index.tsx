@@ -196,7 +196,19 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
       </div>
 
       {/* Geolocation & Destinations */}
-      <div className={`grid gap-6 ${isMapExpanded ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"}`}>
+      <div className={`grid gap-6 grid-cols-1`}>
+        <Section
+          title={t("analytics.destinationDistribution")}
+          icon={<MapPin size={16} />}
+        >
+          <DestinationMap
+            destinations={data?.destinations || []}
+            profileId={profileId || ""}
+            range={range}
+            customRange={customRange}
+            accessPointId={accessPointIdFilter || undefined}
+          />
+        </Section>
         <Section title={t("analytics.clientActivity")} icon={<Globe size={16} />}>
           <HTMLTable striped className="w-full mt-2">
             <thead>
@@ -218,27 +230,6 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
               ))}
             </tbody>
           </HTMLTable>
-        </Section>
-
-        <Section
-          title={t("analytics.destinationDistribution")}
-          icon={<MapPin size={16} />}
-          rightElement={
-            <Button
-              icon={isMapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-              minimal
-              onClick={() => setIsMapExpanded(!isMapExpanded)}
-              title={isMapExpanded ? t("analytics.minimize", "Minimize") : t("analytics.maximize", "Maximize")}
-            />
-          }
-        >
-          <DestinationMap
-            destinations={data?.destinations || []}
-            profileId={profileId || ""}
-            range={range}
-            customRange={customRange}
-            accessPointId={accessPointIdFilter || undefined}
-          />
         </Section>
       </div>
     </div>
