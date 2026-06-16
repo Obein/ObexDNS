@@ -119,7 +119,7 @@ export const DestinationMap: React.FC<DestinationMapProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full max-h-100 aspect-800/566 bg-gray-50 dark:bg-slate-950 rounded-xl overflow-hidden border border-gray-100 dark:border-slate-800 flex flex-col justify-between shadow-sm">
+    <div className="relative w-full h-full max-h-150 aspect-800/566 bg-gray-50 dark:bg-slate-950 rounded-xl overflow-hidden border border-gray-100 dark:border-slate-800 flex flex-col justify-between shadow-sm">
       {/* Map wrapper */}
       <div
         ref={containerRef}
