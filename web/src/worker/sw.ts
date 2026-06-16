@@ -11,6 +11,11 @@ import {
   handleIconPrefetch,
   cleanExpiredCache,
 } from "./sw-icon-cache.ts";
+import {
+  isLogDetailRequest,
+  handleLogDetailFetch,
+  cleanExpiredLogCache,
+} from "./sw-log-cache.ts";
 
 // TypeScript declaration for Service Worker global scope
 declare const self: ServiceWorkerGlobalScope & {
@@ -28,7 +33,8 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     Promise.all([
       self.clients.claim(),
-      cleanExpiredCache()
+      cleanExpiredCache(),
+      cleanExpiredLogCache()
     ])
   );
 });
@@ -40,6 +46,11 @@ self.addEventListener("fetch", (event) => {
   // Intercept DuckDuckGo icon requests
   if (isIconRequest(url)) {
     event.respondWith(handleIconFetch(event));
+  }
+
+  // Intercept Log Detail API requests
+  if (isLogDetailRequest(url)) {
+    event.respondWith(handleLogDetailFetch(event));
   }
 });
 
