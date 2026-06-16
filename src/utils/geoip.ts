@@ -1,4 +1,5 @@
 import { cacheUtils } from "./cache";
+import { isPublicInternetIP } from "./validator";
 
 export interface GeoIP {
   country: string;
@@ -14,6 +15,10 @@ const memoryCache = new Map<string, { data: GeoIP; expiresAt: number }>();
 const MEMORY_CACHE_TTL = 14 * 24 * 60 * 60 * 1000; // 14 days
 
 export async function fetchGeoIP(ip: string): Promise<GeoIP | null> {
+  if (!isPublicInternetIP(ip)) {
+    return null;
+  }
+
   const cacheKey = `geoip:${ip}`;
   const now = Date.now();
 

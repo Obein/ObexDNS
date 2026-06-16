@@ -99,7 +99,7 @@
     "currentLocation": "当前位置",
     "dohUrlTitle": "当前配置 DoH URL",
     "accessPointTitle": "Access DoH URL",
-    "defaultAccessPointName": "设备 1",
+    "defaultAccessPointName": "设备-1",
     "moreAccessPoints": "更多接入点 ↗",
     "accessPointName": "接入点名称",
     "accessPointToken": "访问密钥",

@@ -99,7 +99,7 @@
     "currentLocation": "當前位置",
     "dohUrlTitle": "當前配置 DoH URL",
     "accessPointTitle": "Access DoH URL",
-    "defaultAccessPointName": "設備 1",
+    "defaultAccessPointName": "設備-1",
     "moreAccessPoints": "更多存取點 ↗",
     "accessPointName": "存取點名稱",
     "accessPointNameFormatTip": "存取點名稱提示：1-30 位字元，只允許字母、數字、下劃線和中劃線",
