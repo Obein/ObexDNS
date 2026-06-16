@@ -10,6 +10,7 @@ import { LogsTable } from "./components/LogsTable";
 import { LogsList } from "./components/LogsList";
 import { LogDetailsDrawer } from "./components/LogDetailsDrawer";
 const PAGE_SIZE = 50;
+const PAGE_SIZE_IN_REALTIME = 25;
 
 export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) => {
   const isMobile = useIsMobile();
@@ -28,6 +29,13 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
   const [hasMore, setHasMore] = useState(true);
   const [realtimeRefresh, setRealtimeRefresh] = useState(false);
   const [stats, setStats] = useState<{ total: number; pass: number; block: number; redirect: number } | null>(null);
+  const [logRetentionDays, setLogRetentionDays] = useState<number>(30);
+  const [prevLatestTimestamp, setPrevLatestTimestamp] = useState<number | null>(null);
+
+  const logsRef = useRef<LogEntry[]>([]);
+  useEffect(() => {
+    logsRef.current = logs;
+  }, [logs]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const observer = useRef<IntersectionObserver | null>(null);
@@ -43,6 +51,21 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
     };
   }, []);
 
+  // Fetch log retention days from profile settings
+  useEffect(() => {
+    fetch(`/api/profiles/${profileId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        try {
+          const settings = JSON.parse(data.settings);
+          setLogRetentionDays(settings.log_retention_days !== undefined ? Number(settings.log_retention_days) : 30);
+        } catch (e) {
+          console.error("Failed to parse settings", e);
+        }
+      })
+      .catch((e) => console.error("Failed to fetch profile settings", e));
+  }, [profileId]);
+
   useEffect(() => {
     fetch(`/api/profiles/${profileId}/access_points`)
       .then(r => r.json())
@@ -50,7 +73,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
       .catch(console.error);
   }, [profileId]);
 
-  const fetchLogs = async (currentRange: TimeRange, isInitial: boolean = true) => {
+  const fetchLogs = async (currentRange: TimeRange, isInitial: boolean = true, isAutoRefresh: boolean = false) => {
     // Abort the previous request if it's still running
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -65,7 +88,8 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
     else setLoadingMore(true);
 
     try {
-      let url = `/api/profiles/${profileId}/logs?range=${currentRange}&limit=${PAGE_SIZE}`;
+      const limit = realtimeRefresh ? PAGE_SIZE_IN_REALTIME : PAGE_SIZE;
+      let url = `/api/profiles/${profileId}/logs?range=${currentRange}&limit=${limit}`;
       if (currentRange === "custom" && customRange.start && customRange.end) {
         const startTs = Math.floor(new Date(customRange.start).getTime() / 1000);
         const endTs = Math.floor(new Date(customRange.end).getTime() / 1000);
@@ -96,8 +120,14 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
       console.log("logsData:", logsData, "statsData:", statsData);
 
       if (isInitial) {
+        if (isAutoRefresh) {
+          const oldLatest = logsRef.current.length > 0 ? logsRef.current[0].timestamp : null;
+          setPrevLatestTimestamp(oldLatest);
+        } else {
+          setPrevLatestTimestamp(null);
+        }
         setLogs(logsData);
-        setHasMore(logsData.length >= PAGE_SIZE);
+        setHasMore(realtimeRefresh ? false : logsData.length >= limit);
         if (statsData) {
           const summary = { total: 0, pass: 0, block: 0, redirect: 0 };
           statsData.forEach((item: { action: string; count: number }) => {
@@ -111,7 +141,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
         }
       } else {
         setLogs((prev) => [...prev, ...logsData]);
-        setHasMore(logsData.length >= PAGE_SIZE);
+        setHasMore(realtimeRefresh ? false : logsData.length >= limit);
       }
 
       if (logsData && logsData.length > 0) {
@@ -138,13 +168,14 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
   };
 
   const loadMore = useCallback(() => {
+    if (realtimeRefresh) return;
     if (!loading && !loadingMore && hasMore) fetchLogs(range, false);
-  }, [loading, loadingMore, hasMore, range, profileId, statusFilter, accessPointIdFilter, searchQuery, logs, customRange]);
+  }, [loading, loadingMore, hasMore, range, profileId, statusFilter, accessPointIdFilter, searchQuery, logs, customRange, realtimeRefresh]);
 
   const lastLogElementRef = useCallback(
     (node: HTMLDivElement | null) => {
-      if (loading || loadingMore) return;
       if (observer.current) observer.current.disconnect();
+      if (loading || loadingMore || realtimeRefresh) return;
       observer.current = new IntersectionObserver(
         (entries) => {
           if (entries[0].isIntersecting && hasMore) loadMore();
@@ -153,14 +184,14 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
       );
       if (node) observer.current.observe(node);
     },
-    [loading, loadingMore, hasMore, loadMore]
+    [loading, loadingMore, hasMore, loadMore, realtimeRefresh]
   );
 
   useEffect(() => {
     if (range === "custom" && (!customRange.start || !customRange.end)) return;
     const timer = setTimeout(() => fetchLogs(range, true), searchQuery ? 500 : 0);
     return () => clearTimeout(timer);
-  }, [profileId, range, statusFilter, accessPointIdFilter, searchQuery, customRange]);
+  }, [profileId, range, statusFilter, accessPointIdFilter, searchQuery, customRange, realtimeRefresh]);
 
   useEffect(() => {
     const autoRefreshTimer = setInterval(() => {
@@ -172,7 +203,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
         !searchQuery &&
         range !== "custom"
       ) {
-        fetchLogs(range, true);
+        fetchLogs(range, true, true);
       }
     }, 2000);
     return () => clearInterval(autoRefreshTimer);
@@ -207,6 +238,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         stats={stats}
+        logRetentionDays={logRetentionDays}
       />
 
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 relative">
@@ -217,14 +249,30 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
             </Callout>
           </div>
         ) : isMobile ? (
-          <LogsList logs={logs} setSelectedLog={setSelectedLog} setIsDrawerOpen={setIsDrawerOpen} lastLogElementRef={lastLogElementRef} />
+          <LogsList
+            logs={logs}
+            setSelectedLog={setSelectedLog}
+            setIsDrawerOpen={setIsDrawerOpen}
+            lastLogElementRef={lastLogElementRef}
+            prevLatestTimestamp={prevLatestTimestamp}
+            realtimeRefresh={realtimeRefresh}
+          />
         ) : (
-          <LogsTable logs={logs} setSelectedLog={setSelectedLog} setIsDrawerOpen={setIsDrawerOpen} lastLogElementRef={lastLogElementRef} />
+          <LogsTable
+            logs={logs}
+            setSelectedLog={setSelectedLog}
+            setIsDrawerOpen={setIsDrawerOpen}
+            lastLogElementRef={lastLogElementRef}
+            prevLatestTimestamp={prevLatestTimestamp}
+            realtimeRefresh={realtimeRefresh}
+          />
         )}
 
         <div className="p-6 flex flex-col items-center">
           {loadingMore ? (
             <Spinner size={16} />
+          ) : realtimeRefresh ? (
+            logs.length > 0 && <span className="text-[10px] opacity-30 italic">{t("logs.realtimeLoadMoreTip")}</span>
           ) : (
             !hasMore &&
             logs.length > 0 && <span className="text-[10px] opacity-30 italic">{t("logs.loadedAll", { count: logs.length })}</span>

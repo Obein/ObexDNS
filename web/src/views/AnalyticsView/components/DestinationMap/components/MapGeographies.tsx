@@ -1,7 +1,8 @@
 import React from "react";
 import { Geographies, Geography } from "@vnedyalk0v/react19-simple-maps";
+import { useTranslation } from "react-i18next";
 import { numericToAlpha2 } from "../../../countryMapping";
-import { getFlagEmoji } from "../../../utils";
+import { getFlagEmoji, getCountryName } from "../../../utils";
 import type { HoveredCountry, CountryMapData } from "../types";
 
 interface MapGeographiesProps {
@@ -21,6 +22,7 @@ export const MapGeographies: React.FC<MapGeographiesProps> = ({
   hoveredCountry,
   setHoveredCountry,
 }) => {
+  const { i18n } = useTranslation();
   if (!geographyData) return null;
 
   return (
@@ -34,7 +36,7 @@ export const MapGeographies: React.FC<MapGeographiesProps> = ({
 
           const updateHovered = (event: React.MouseEvent<SVGPathElement>) => {
             if (!countryCode || hoveredCountry?.isPinned) return;
-            const name = dest?.name || geo.properties.name;
+            const name = dest?.name || getCountryName(countryCode, i18n.language);
             const flag = getFlagEmoji(countryCode);
             const containerRect = containerRef.current?.getBoundingClientRect();
             const x = event.clientX - (containerRect?.left || 0);
@@ -52,7 +54,7 @@ export const MapGeographies: React.FC<MapGeographiesProps> = ({
           const handleGeographyClick = (event: React.MouseEvent<SVGPathElement>) => {
             event.stopPropagation();
             if (!countryCode) return;
-            const name = dest?.name || geo.properties.name;
+            const name = dest?.name || getCountryName(countryCode, i18n.language);
             const flag = getFlagEmoji(countryCode);
             const containerRect = containerRef.current?.getBoundingClientRect();
             const x = event.clientX - (containerRect?.left || 0);

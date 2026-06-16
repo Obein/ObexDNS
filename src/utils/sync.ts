@@ -1,8 +1,10 @@
-import { Env, List, ExecutionContext } from "../types";
+import { Env, ExecutionContext } from "../types";
 import { parseList } from "./parser";
 import { BloomFilter } from "./bloom";
 import { pipelineCache } from "../pipeline/cache";
 import { ProfileModel } from "../models/profile";
+import { ListModel } from "../models/list";
+import { ProfileBloomModel } from "../models/profileBloom";
 import { isSafeUrl } from "./validator";
 
 /**
@@ -17,23 +19,27 @@ import { isSafeUrl } from "./validator";
  */
 export async function syncProfileLists(profileId: string, env: Env, ctx: ExecutionContext): Promise<void> {
   const profileModel = new ProfileModel(env.DB);
+  const listModel = new ListModel(env.DB);
+  const bloomModel = new ProfileBloomModel(env.DB);
   const now = Math.floor(Date.now() / 1000);
 
   try {
-    const lists = await profileModel.getLists(profileId);
+    const lists = await listModel.getLists(profileId);
     
     if (lists.length === 0) {
       // 如果当前 Profile 没有配置任何订阅列表，则清理旧的布隆过滤器数据
-      await profileModel.clearProfileBlooms(profileId);
+      await bloomModel.clearProfileBlooms(profileId);
       return;
     }
     const allDomains = new Set<string>();
 
-    // 逐个拉取所有列表的最新的规则文件
+    // 逐个拉取所有列表的最新的规则 file
     for (const list of lists) {
       let success = false;
+      let syncError: string | null = null;
       try {
         if (!isSafeUrl(list.url)) {
+          syncError = "Invalid list URL. Private networks and localhosts are not allowed.";
           console.error(`[Sync] Blocked unsafe URL: ${list.url}`);
         } else {
           const syncTimeoutMs = Number(env.SYNC_TIMEOUT_MS) || 30000;
@@ -42,10 +48,12 @@ export async function syncProfileLists(profileId: string, env: Env, ctx: Executi
             const contentLength = response.headers.get('content-length');
             const MAX_BYTES = 20 * 1024 * 1024; // 20 MB limit
             if (contentLength && parseInt(contentLength, 10) > MAX_BYTES) {
+              syncError = `List too large (${(parseInt(contentLength, 10) / 1024 / 1024).toFixed(2)} MB), limit is 20 MB`;
               console.error(`[Sync] List too large, blocking: ${list.url}`);
             } else {
               const reader = response.body?.getReader();
               if (!reader) {
+                syncError = "Failed to get stream reader from response";
                 console.error(`[Sync] Failed to get reader for: ${list.url}`);
               } else {
                 let totalBytes = 0;
@@ -57,7 +65,7 @@ export async function syncProfileLists(profileId: string, env: Env, ctx: Executi
                   if (value) {
                     totalBytes += value.length;
                     if (totalBytes > MAX_BYTES) {
-                      throw new Error(`[Sync] Content exceeded maximum size of ${MAX_BYTES} bytes`);
+                      throw new Error(`Content exceeded maximum size of ${MAX_BYTES} bytes`);
                     }
                     chunks.push(value);
                   }
@@ -75,17 +83,22 @@ export async function syncProfileLists(profileId: string, env: Env, ctx: Executi
                 if (domains.length > 0) {
                   domains.forEach(d => allDomains.add(d));
                   success = true;
+                } else {
+                  syncError = "No valid domain rules found in the list";
                 }
               }
             }
+          } else {
+            syncError = `HTTP error! Status: ${response.status} ${response.statusText}`;
           }
         }
-      } catch (e) {
+      } catch (e: any) {
+        syncError = e.message || String(e);
         console.error(`[Sync] Failed to fetch ${list.url}:`, e);
       }
 
       // 单个列表拉取完毕后更新其同步时间和可用状态
-      await profileModel.updateListSyncStatus(list.id, now, success ? 1 : 0);
+      await listModel.updateListSyncStatus(list.id, now, success ? 1 : 0, syncError);
     }
 
     let domainArray = Array.from(allDomains);
@@ -104,7 +117,7 @@ export async function syncProfileLists(profileId: string, env: Env, ctx: Executi
       const binary = bloom.toUint8Array();
 
       // 将序列化后的布隆过滤器二进制数据存储到 D1 数据库中
-      await profileModel.upsertProfileBloom(profileId, binary.buffer as ArrayBuffer, now);
+      await bloomModel.upsertProfileBloom(profileId, binary.buffer as ArrayBuffer, now);
 
       // 通知缓存层异步清除此 Profile 的相关解析缓存，以使新规则立刻生效
       if (ctx && typeof ctx.waitUntil === 'function') {
