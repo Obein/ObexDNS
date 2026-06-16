@@ -177,9 +177,12 @@ export const LogDetailsDrawer: React.FC<LogDetailsDrawerProps> = ({
                               <MapPin size={16} className="oklch(60.9% 0.126 221.723) mt-1" />
                               <div>
                                 <div className="font-bold text-sm">
-                                  {geo.city}, {geo.country}
+                                  {[geo.city, geo.region, geo.country].filter(Boolean).join(", ")}
                                 </div>
-                                <div className="text-xs opacity-70 mt-1">{geo.isp}</div>
+                                <div className="text-xs opacity-70 mt-1">
+                                  {geo.isp}
+                                  {geo.as && <span className="opacity-60 block mt-0.5">{geo.as}</span>}
+                                </div>
                               </div>
                             </div>
                           </div>

@@ -9,7 +9,7 @@ interface LegendProps {
 export const Legend: React.FC<LegendProps> = ({ maxThreshold, formatNumber }) => {
   const { t } = useTranslation();
   return (
-    <div className="absolute bottom-3 left-3 flex flex-col gap-1.5 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md p-2 rounded-lg border border-gray-200/50 dark:border-slate-800/50 shadow-sm z-10 max-w-70">
+    <div className="sm:absolute sm:bottom-3 sm:left-3 relative m-3 sm:m-0 flex flex-col shrink-0 gap-1.5 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md p-2 rounded-lg border border-gray-200/50 dark:border-slate-800/50 shadow-sm z-10 max-w-70">
       <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("analytics.queries")}</span>
       <div className="flex items-center gap-0.5">
         {Array.from({ length: 11 }).map((_, i) => (

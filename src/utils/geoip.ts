@@ -5,6 +5,8 @@ export interface GeoIP {
   country_code: string;
   city?: string;
   isp?: string;
+  region?: string;
+  as?: string;
 }
 
 // In-memory cache fallback (expires after 14 days)
@@ -46,19 +48,33 @@ export async function fetchGeoIP(ip: string): Promise<GeoIP | null> {
 
   // Fetch from public API
   try {
-    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,city,isp`);
+    const response = await fetch(
+      `http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,isp,as`,
+      {
+        cf: {
+          cacheTtlByStatus: {
+            "200-299": 86400 * 14, // 14 days
+            "400-499": 5,
+            "500-599": 0,
+          },
+          cacheEverything: true,
+        },
+      }
+    );
     const data = await response.json() as any;
 
     if (data.status === 'success') {
       const geo: GeoIP = {
         country: data.country,
         country_code: data.countryCode,
+        region: data.regionName,
         city: data.city,
-        isp: data.isp
+        isp: data.isp,
+        as: data.as
       };
 
-      // Store in memory cache (evict first entry if size exceeds 1000 to prevent leaks)
-      if (memoryCache.size >= 1000) {
+      // Store in memory cache (evict first entry if size exceeds 100k to prevent leaks)
+      if (memoryCache.size >= 100000) {
         const firstKey = memoryCache.keys().next().value;
         if (firstKey !== undefined) {
           memoryCache.delete(firstKey);
