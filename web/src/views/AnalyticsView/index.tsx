@@ -15,7 +15,7 @@ import {
   InputGroup,
   HTMLSelect,
 } from "@blueprintjs/core";
-import { Shield, ShieldAlert, Zap, Globe, MapPin, Calendar, RotateCcw, Maximize2, Minimize2 } from "lucide-react";
+import { Shield, ShieldAlert, Zap, Globe, MapPin, Calendar, RotateCcw, } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type {  AnalyticsData, TimeRange  } from "./types";
@@ -34,7 +34,6 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
   const [accessPointIdFilter, setAccessPointIdFilter] = useState<string | null>(null);
   const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([]);
-  const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   useEffect(() => {
     fetch(`/api/profiles/${profileId}/access_points`)
