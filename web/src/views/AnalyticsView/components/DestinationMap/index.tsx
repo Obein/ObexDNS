@@ -37,7 +37,7 @@ export const DestinationMap: React.FC<DestinationMapProps> = ({
     formatNumber,
   } = useMapData(destinations);
 
-  const [position, setPosition] = useState({ coordinates: createCoordinates(0, 0), zoom: 1 });
+  const [position, setPosition] = useState({ coordinates: createCoordinates(0, 0), zoom: 1.2 });
   const [hoveredCountry, setHoveredCountry] = useState<HoveredCountry | null>(null);
   const [debouncedCountry, setDebouncedCountry] = useState<HoveredCountry | null>(null);
   const [ispCache, setIspCache] = useState<Record<string, { name: string; count: number }[]>>({});
@@ -115,15 +115,15 @@ export const DestinationMap: React.FC<DestinationMapProps> = ({
   };
 
   const handleReset = () => {
-    setPosition({ coordinates: createCoordinates(0, 0), zoom: 1 });
+    setPosition({ coordinates: createCoordinates(0, 0), zoom: 1.2 });
   };
 
   return (
-    <div className="relative w-full h-100 bg-gray-50 dark:bg-slate-950 rounded-xl overflow-hidden border border-gray-100 dark:border-slate-800 flex flex-col justify-between shadow-sm">
+    <div className="relative w-full min-h-85 max-h-120 aspect-800/566 bg-gray-50 dark:bg-slate-950 rounded-xl overflow-hidden border border-gray-100 dark:border-slate-800 flex flex-col justify-between shadow-sm">
       {/* Map wrapper */}
       <div
         ref={containerRef}
-        className="relative w-full flex-1 overflow-hidden select-none cursor-grab active:cursor-grabbing"
+        className="relative w-full flex-1 min-h-0 overflow-hidden select-none cursor-grab active:cursor-grabbing"
         onClick={(e) => {
           if (e.target === e.currentTarget || (e.target as SVGElement).tagName === "svg") {
             setHoveredCountry(null);
