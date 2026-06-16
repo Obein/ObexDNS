@@ -1,5 +1,6 @@
 import React from "react";
 import { Card, Tag, Intent } from "@blueprintjs/core";
+import { clsx } from "clsx";
 import type {  LogEntry  } from "../types";
 
 export interface LogsListProps {
@@ -7,22 +8,36 @@ export interface LogsListProps {
   setSelectedLog: (log: LogEntry) => void;
   setIsDrawerOpen: (open: boolean) => void;
   lastLogElementRef: (node: HTMLDivElement | null) => void;
+  prevLatestTimestamp: number | null;
+  realtimeRefresh: boolean;
 }
 
-export const LogsList: React.FC<LogsListProps> = ({ logs, setSelectedLog, setIsDrawerOpen, lastLogElementRef }) => {
+export const LogsList: React.FC<LogsListProps> = ({
+  logs,
+  setSelectedLog,
+  setIsDrawerOpen,
+  lastLogElementRef,
+  prevLatestTimestamp,
+  realtimeRefresh,
+}) => {
   return (
     <div className="space-y-3 py-4">
-      {logs.map((log, idx) => (
-        <Card
-          key={log.id}
-          interactive
-          onClick={() => {
-            setSelectedLog(log);
-            setIsDrawerOpen(true);
-          }}
-          className="p-3 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden"
-          ref={idx === logs.length - 1 ? lastLogElementRef : null}
-        >
+      {logs.map((log, idx) => {
+        const isNew = realtimeRefresh && prevLatestTimestamp !== null && log.timestamp > prevLatestTimestamp;
+        return (
+          <Card
+            key={log.id}
+            interactive
+            onClick={() => {
+              setSelectedLog(log);
+              setIsDrawerOpen(true);
+            }}
+            className={clsx(
+              "p-3 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden",
+              { "animate-row-glow": isNew }
+            )}
+            ref={idx === logs.length - 1 ? lastLogElementRef : null}
+          >
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-2 min-w-0">
               <img
@@ -58,7 +73,7 @@ export const LogsList: React.FC<LogsListProps> = ({ logs, setSelectedLog, setIsD
                 {log.record_type}
               </span>
               {log.access_point_name && (
-                <span className="text-[10px] opacity-50 truncate max-w-[100px]">
+                <span className="text-[10px] opacity-50 truncate max-w-25">
                   {log.access_point_name}
                 </span>
               )}
@@ -67,8 +82,9 @@ export const LogsList: React.FC<LogsListProps> = ({ logs, setSelectedLog, setIsD
               {log.latency ? `${log.latency}ms` : ""}
             </div>
           </div>
-        </Card>
-      ))}
+          </Card>
+        );
+      })}
     </div>
   );
 };

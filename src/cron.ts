@@ -31,7 +31,8 @@ export async function handleScheduled(
     // Clean up expired sessions and temporary TOTP pre-auth sessions
     try {
       const sessionModel = new SessionModel(env.DB);
-      await sessionModel.cleanupExpired(now);
+      const idleTimeoutMin = Number(env.SESSION_IDLE_TIMEOUT_MINUTES) || 60;
+      await sessionModel.cleanupExpired(now, idleTimeoutMin * 60);
     } catch (e) {
       console.error("[Cron] Expired sessions cleanup failed:", e);
     }

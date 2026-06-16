@@ -24,8 +24,10 @@ export const CreateProfileCard: React.FC<CreateProfileCardProps> = ({
 
   const getErrorMessage = (err: string) => {
     if (!err) return "";
-    if (err === "Profile limit exceeded (max 10)") {
-      return t("common.profileLimitExceeded", "Profile limit exceeded (max 10)");
+    if (err.startsWith("Profile limit exceeded")) {
+      const match = err.match(/\(max (\d+)\)/);
+      const maxVal = match ? match[1] : "10";
+      return t("common.profileLimitExceeded", { max: maxVal, defaultValue: `Profile limit exceeded (max ${maxVal})` });
     }
     if (err === "The profile name already exists") {
       return t("common.profileNameExists", "The profile name already exists");

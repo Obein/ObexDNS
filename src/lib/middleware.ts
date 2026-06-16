@@ -1,6 +1,7 @@
 import { Env, User } from '../types';
 import { getOrCreateJwtSecret, readCsrfCookie } from './auth';
 import { importJwtSecret, verifyJWT } from './jwt';
+import { SessionModel } from '../models/session';
 
 /**
  * Applies standard security headers and Content-Security-Policy (CSP) with a nonce.
@@ -48,6 +49,30 @@ export async function getCurrentUser(request: Request, env: Env): Promise<User |
       jwtKey
     );
     if (payload) {
+      // Validate session in database (enforce statefulness and idle timeout)
+      const sessionModel = new SessionModel(env.DB);
+      const session = await sessionModel.getSession(payload.sessionId);
+      if (!session) {
+        return null;
+      }
+
+      // Check idle timeout
+      const now = Math.floor(Date.now() / 1000);
+      const idleTimeoutMin = Number(env.SESSION_IDLE_TIMEOUT_MINUTES) || 60;
+      const idleTimeoutSec = idleTimeoutMin * 60;
+      const lastActive = session.last_active_at || session.created_at;
+
+      if (now - lastActive > idleTimeoutSec) {
+        // Invalidate the session immediately on idle timeout
+        await sessionModel.deleteSession(session.id);
+        return null;
+      }
+
+      // Throttle DB updates: only update if at least 10 seconds have elapsed since last active time
+      if (now - lastActive > 10) {
+        await sessionModel.updateLastActive(session.id, now);
+      }
+
       return { id: payload.userId, username: "", role: payload.role as any };
     }
   } catch (e) {

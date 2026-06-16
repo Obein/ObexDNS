@@ -1,6 +1,7 @@
 import React from "react";
 import { Marker, createCoordinates } from "@vnedyalk0v/react19-simple-maps";
-import { getFlagEmoji } from "../../../utils";
+import { useTranslation } from "react-i18next";
+import { getFlagEmoji, getCountryName } from "../../../utils";
 import type { HoveredCountry, CountryMapData } from "../types";
 
 export const microRegions: Record<string, { name: string; coordinates: [number, number] }> = {
@@ -34,6 +35,8 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
   hoveredCountry,
   setHoveredCountry,
 }) => {
+  const { i18n } = useTranslation();
+
   return (
     <>
       {Object.entries(microRegions).map(([code, config]) => {
@@ -45,7 +48,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
 
         const updateHovered = (event: React.MouseEvent<SVGElement>) => {
           if (hoveredCountry?.isPinned) return;
-          const name = dest?.name || config.name;
+          const name = dest?.name || getCountryName(code, i18n.language);
           const flag = getFlagEmoji(code);
           const containerRect = containerRef.current?.getBoundingClientRect();
           const x = event.clientX - (containerRect?.left || 0);
@@ -62,7 +65,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
 
         const handleMarkerClick = (event: React.MouseEvent<SVGElement>) => {
           event.stopPropagation();
-          const name = dest?.name || config.name;
+          const name = dest?.name || getCountryName(code, i18n.language);
           const flag = getFlagEmoji(code);
           const containerRect = containerRef.current?.getBoundingClientRect();
           const x = event.clientX - (containerRect?.left || 0);

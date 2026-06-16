@@ -14,6 +14,7 @@ export interface Session {
   latitude?: number | null;
   longitude?: number | null;
   rotation_counter?: number;
+  last_active_at?: number | null;
 }
 
 export interface SessionValidationResult {
@@ -71,7 +72,8 @@ export async function createSession(
     ip_address: ipAddress,
     user_agent: userAgent,
     latitude: latitude,
-    longitude: longitude
+    longitude: longitude,
+    last_active_at: now
   };
 
   const sessionModel = new SessionModel(env.DB);
@@ -83,7 +85,8 @@ export async function createSession(
     session.ip_address,
     session.user_agent,
     session.latitude,
-    session.longitude
+    session.longitude,
+    session.last_active_at
   );
 
   const refreshToken = createRefreshTokenString(session.id, 0);
@@ -122,7 +125,8 @@ export async function rotateSession(
     user_agent: result.user_agent,
     latitude: result.latitude,
     longitude: result.longitude,
-    rotation_counter: result.rotation_counter
+    rotation_counter: result.rotation_counter,
+    last_active_at: result.last_active_at
   };
 
   const user: User = {
@@ -142,6 +146,16 @@ export async function rotateSession(
   if (Math.floor(Date.now() / 1000) >= session.expires_at) {
     await invalidateSession(env, session.id);
     return { session: null, user, newRefreshToken: null, reason: "expired" };
+  }
+
+  // Idle timeout check
+  const now = Math.floor(Date.now() / 1000);
+  const idleTimeoutMin = Number(env.SESSION_IDLE_TIMEOUT_MINUTES) || 60;
+  const idleTimeoutSec = idleTimeoutMin * 60;
+  const lastActive = session.last_active_at || session.created_at;
+  if (now - lastActive > idleTimeoutSec) {
+    await invalidateSession(env, session.id);
+    return { session: null, user, newRefreshToken: null, reason: "idle_timeout" };
   }
 
   // Strict Geolocation Check
@@ -173,6 +187,7 @@ export async function rotateSession(
 
   // Rotate the token
   await sessionModel.incrementRotationCounter(session.id);
+  await sessionModel.updateLastActive(session.id, now);
   const newCounter = (session.rotation_counter || 0) + 1;
   const newRefreshToken = createRefreshTokenString(session.id, newCounter);
 

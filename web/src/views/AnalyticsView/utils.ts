@@ -6,6 +6,16 @@ export function getFlagEmoji(countryCode: string) {
   return String.fromCodePoint(...codePoints);
 }
 
+export function getCountryName(countryCode: string, locale: string = "en"): string {
+  if (!countryCode) return "";
+  try {
+    const regionNames = new Intl.DisplayNames([locale], { type: "region" });
+    return regionNames.of(countryCode.toUpperCase()) || countryCode;
+  } catch (e) {
+    return countryCode;
+  }
+}
+
 export function processTrendData(data: AnalyticsData | null, range: TimeRange, customRange: { start: string; end: string }) {
   if (!data) return [];
 
@@ -39,18 +49,6 @@ export function processTrendData(data: AnalyticsData | null, range: TimeRange, c
     case "30d":
       interval = 86400;
       since = until - 30 * 86400;
-      break;
-    case "180d":
-      interval = 86400;
-      since = until - 180 * 86400;
-      break;
-    case "360d":
-      interval = 86400;
-      since = until - 360 * 86400;
-      break;
-    case "720d":
-      interval = 86400;
-      since = until - 720 * 86400;
       break;
     case "custom":
       interval = 3600;

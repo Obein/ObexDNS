@@ -61,3 +61,16 @@
 
 /* 适配 Tailwind 的 dark 修饰符 */
 @variant dark (&:where(.dark, .dark *));
+
+@keyframes rowGlow {
+  0% {
+    background-color: rgba(59, 130, 246, 0.25);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.animate-row-glow {
+  animation: rowGlow 2.5s ease-out;
+}

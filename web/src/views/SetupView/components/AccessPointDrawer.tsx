@@ -78,7 +78,13 @@ export const AccessPointDrawer: React.FC<AccessPointDrawerProps> = ({
         onRefresh();
       } else {
         const errMsg = await res.text();
-        toasterRef.current?.show({ message: errMsg || "Failed to create access point", intent: Intent.DANGER });
+        let displayMsg = errMsg;
+        if (errMsg.startsWith("Access point limit exceeded")) {
+          const match = errMsg.match(/\(max (\d+)\)/);
+          const maxVal = match ? match[1] : "100";
+          displayMsg = t("setup.accessPointLimitExceeded", { max: maxVal, defaultValue: `Access Point limit exceeded (max ${maxVal})` });
+        }
+        toasterRef.current?.show({ message: displayMsg || "Failed to create access point", intent: Intent.DANGER });
       }
     } catch (e) {
       console.error(e);

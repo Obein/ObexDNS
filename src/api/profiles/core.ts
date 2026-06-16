@@ -34,7 +34,8 @@ export async function handleProfilesCoreCollectionRequest(
     }
 
     const existingProfiles = await profileModel.listByOwner(user.id);
-    if (existingProfiles.length >= 10) return new Response("Profile limit exceeded (max 10)", { status: 400 });
+    const maxProfiles = Number(env.MAX_PROFILES_PER_USER) || 10;
+    if (existingProfiles.length >= maxProfiles) return new Response(`Profile limit exceeded (max ${maxProfiles})`, { status: 400 });
 
     const existing = existingProfiles.find(p => p.name === body.name);
     if (existing) return new Response("The profile name already exists", { status: 400 });

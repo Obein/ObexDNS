@@ -42,7 +42,11 @@ export class LogModel {
     if (options.before) { queryStr += " AND l.timestamp < ?"; params.push(options.before); }
     if (options.access_point_id) { queryStr += " AND l.access_point_id = ?"; params.push(options.access_point_id); }
     
-    queryStr += ` ORDER BY l.timestamp DESC LIMIT ${options.limit || 50}`;
+    let limit = options.limit !== undefined && !isNaN(options.limit) && options.limit > 0 ? options.limit : 50;
+    if (limit > 100) {
+      limit = 100;
+    }
+    queryStr += ` ORDER BY l.timestamp DESC LIMIT ${limit}`;
     
     const { results } = await this.db.prepare(queryStr).bind(...params).all<ResolutionLog>();
     return results;

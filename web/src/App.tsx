@@ -93,13 +93,11 @@ function App() {
       }
 
       // 2. If we don't have an access token in memory, try to refresh first.
-      let token = getAccessToken();
-      if (!token) {
+      if (!getAccessToken()) {
         const refreshRes = await fetch("/api/auth/refresh", { method: "POST" });
         if (refreshRes.ok) {
           const data = await refreshRes.json();
           setAccessToken(data.accessToken);
-          token = data.accessToken;
         } else {
           clearCsrfToken();
           setIsLoggedIn(false);
