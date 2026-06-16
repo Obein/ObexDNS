@@ -132,9 +132,6 @@ export const AnalyticsView: React.FC<{ profileId: string }> = ({ profileId }) =>
     { key: "24h", days: 1 },
     { key: "7d", days: 7 },
     { key: "30d", days: 30 },
-    { key: "180d", days: 180 },
-    { key: "360d", days: 360 },
-    { key: "720d", days: 720 },
   ];
   const visibleRanges = RANGE_PRESETS.filter(r => r.days <= logRetentionDays).map(r => r.key as TimeRange);
 

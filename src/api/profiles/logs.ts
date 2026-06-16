@@ -59,9 +59,6 @@ export async function handleProfileLogsAndAnalyticsRequest(
         case '24h': since -= 86400; break;
         case '7d': since -= 604800; break;
         case '30d': since -= 2592000; break;
-        case '180d': since -= 15552000; break;
-        case '360d': since -= 31104000; break;
-        case '720d': since -= 62208000; break;
         default: since -= 86400; break;
       }
       since = Math.max(since, retentionThreshold);
@@ -107,9 +104,6 @@ export async function handleProfileLogsAndAnalyticsRequest(
         case '24h': since = until - 86400; interval = "(timestamp/3600)*3600"; break;
         case '7d': since = until - 604800; interval = "(timestamp/86400)*86400"; break;
         case '30d': since = until - 2592000; interval = "(timestamp/86400)*86400"; break;
-        case '180d': since = until - 15552000; interval = "(timestamp/86400)*86400"; break;
-        case '360d': since = until - 31104000; interval = "(timestamp/86400)*86400"; break;
-        case '720d': since = until - 62208000; interval = "(timestamp/86400)*86400"; break;
         default: since = until - 86400; interval = "(timestamp/3600)*3600"; break;
       }
     }
