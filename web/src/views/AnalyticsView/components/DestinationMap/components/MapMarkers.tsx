@@ -48,7 +48,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
 
         const updateHovered = (event: React.MouseEvent<SVGElement>) => {
           if (hoveredCountry?.isPinned) return;
-          const name = dest?.name || getCountryName(code, i18n.language);
+          const name = getCountryName(code, i18n.language) || dest?.name || code;
           const flag = getFlagEmoji(code);
           const containerRect = containerRef.current?.getBoundingClientRect();
           const x = event.clientX - (containerRect?.left || 0);
@@ -65,7 +65,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
 
         const handleMarkerClick = (event: React.MouseEvent<SVGElement>) => {
           event.stopPropagation();
-          const name = dest?.name || getCountryName(code, i18n.language);
+          const name = getCountryName(code, i18n.language) || dest?.name || code;
           const flag = getFlagEmoji(code);
           const containerRect = containerRef.current?.getBoundingClientRect();
           const x = event.clientX - (containerRect?.left || 0);

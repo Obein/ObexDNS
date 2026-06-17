@@ -5,20 +5,50 @@
  * @param options - Optional Intl.DateTimeFormatOptions to customize the format.
  * @returns The formatted date string with the timezone offset suffix.
  */
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+
+let systemTimeZone: string | undefined = undefined;
+let systemLocale: string = typeof navigator !== "undefined" ? navigator.language : "en-US";
+
+export function setSystemTimeZone(tz: string) {
+  systemTimeZone = tz || undefined;
+  formatterCache.clear();
+}
+
+export function setSystemLocale(locale: string) {
+  systemLocale = locale || (typeof navigator !== "undefined" ? navigator.language : "en-US");
+  formatterCache.clear();
+}
+
+function getFormatter(
+  locale: string | undefined,
+  options?: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormat {
+  const key = `${locale || ""}:${options ? JSON.stringify(options) : ""}`;
+  let formatter = formatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    formatterCache.set(key, formatter);
+  }
+  return formatter;
+}
+
 export function formatDateTime(
   date: Date,
   options?: Intl.DateTimeFormatOptions
 ): string {
-  const dateString = date.toLocaleString([], options);
-  const offset = -date.getTimezoneOffset();
-  const absOffset = Math.abs(offset);
-  const hours = Math.floor(absOffset / 60);
-  const minutes = absOffset % 60;
-  const sign = offset >= 0 ? "+" : "-";
+  const mergedOptions: Intl.DateTimeFormatOptions = {
+    timeZone: systemTimeZone,
+    timeZoneName: "short",
+    ...(options || {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }),
+  };
 
-  const tzSuffix = offset === 0
-    ? "UTC"
-    : `UTC${sign}${hours}${minutes ? `:${minutes.toString().padStart(2, '0')}` : ""}`;
-
-  return `${dateString} ${tzSuffix}`;
+  return getFormatter(systemLocale, mergedOptions).format(date);
 }

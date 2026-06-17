@@ -36,7 +36,7 @@ export const MapGeographies: React.FC<MapGeographiesProps> = ({
 
           const updateHovered = (event: React.MouseEvent<SVGPathElement>) => {
             if (!countryCode || hoveredCountry?.isPinned) return;
-            const name = dest?.name || getCountryName(countryCode, i18n.language);
+            const name = getCountryName(countryCode, i18n.language) || dest?.name || countryCode;
             const flag = getFlagEmoji(countryCode);
             const containerRect = containerRef.current?.getBoundingClientRect();
             const x = event.clientX - (containerRect?.left || 0);
@@ -54,7 +54,7 @@ export const MapGeographies: React.FC<MapGeographiesProps> = ({
           const handleGeographyClick = (event: React.MouseEvent<SVGPathElement>) => {
             event.stopPropagation();
             if (!countryCode) return;
-            const name = dest?.name || getCountryName(countryCode, i18n.language);
+            const name = getCountryName(countryCode, i18n.language) || dest?.name || countryCode;
             const flag = getFlagEmoji(countryCode);
             const containerRect = containerRef.current?.getBoundingClientRect();
             const x = event.clientX - (containerRect?.left || 0);

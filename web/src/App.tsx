@@ -11,6 +11,7 @@ import { MainLayout } from "./layouts/MainLayout";
 import { NotFoundView } from "./views/NotFoundView";
 import { ProfileRoutes } from "./routes/ProfileRoutes";
 import type { Profile, UserInfo } from "./types/auth";
+import { setSystemTimeZone, setSystemLocale } from "./utils/date";
 
 const AuthView = lazyWithPreload(() =>
   import("./components/AuthView").then((m) => ({ default: m.AuthView })),
@@ -117,7 +118,15 @@ function App() {
       }
       if (profilesRes.ok && meRes.ok) {
         setProfiles(await profilesRes.json());
-        setCurrentUser(await meRes.json());
+        const meData = await meRes.json();
+        setCurrentUser(meData);
+        if (meData.timezone) {
+          setSystemTimeZone(meData.timezone);
+        }
+        if (meData.locale) {
+          setSystemLocale(meData.locale);
+          i18n.changeLanguage(meData.locale);
+        }
         setIsLoggedIn(true);
       } else {
         setIsLoggedIn(false);

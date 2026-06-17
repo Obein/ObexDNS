@@ -1,5 +1,4 @@
 import { OverlayToaster } from "@blueprintjs/core";
-import type { RegionConfigItem } from "../../config/regions";
 
 export interface SetupViewProps {
   profileId: string;
@@ -7,13 +6,14 @@ export interface SetupViewProps {
   toasterRef?: React.RefObject<OverlayToaster | null>;
 }
 
-export interface DebugInfo {
+export interface ClientInfo {
   ip: string;
   country: string;
+  region?: string;
   city: string;
+  timezone?: string;
   asn: number;
   asOrganization: string;
   connectedProfileId?: string;
-  regions?: Record<string, RegionConfigItem>;
   substituteDomain?: string;
 }
