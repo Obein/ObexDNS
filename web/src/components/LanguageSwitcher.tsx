@@ -1,7 +1,7 @@
 import { Button, Menu, MenuItem, PopoverNext } from "@blueprintjs/core";
 import { useTranslation } from "react-i18next";
 import { Globe } from "lucide-react";
-import { setSystemLocale } from "../utils/date";
+import { updateLocale } from "../utils/locale";
 
 const LOCALE = [
   { label: "English (🇺🇸)", value: "en-US", flag: "🇺🇸" },
@@ -30,19 +30,7 @@ export const LanguageSwitcher = ({
   const currentLang = LOCALE.find((lang) => lang.value === i18n.language) || LOCALE[0];
 
   const handleLanguageChange = async (locale: string) => {
-    i18n.changeLanguage(locale);
-    setSystemLocale(locale);
-    
-    // Attempt to persist the language to user profile if logged in
-    try {
-      await fetch("/api/account/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locale }),
-      });
-    } catch (e) {
-      // Ignore if not logged in or backend unavailable
-    }
+    await updateLocale(locale);
   };
 
   return (

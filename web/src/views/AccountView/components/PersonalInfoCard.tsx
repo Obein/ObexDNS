@@ -40,8 +40,6 @@ export interface PersonalInfoCardProps {
   onUpdateUsername: () => void;
   /** Callback to submit timezone change. */
   onUpdateTimezone?: (tz: string | null) => void;
-  /** Callback to submit locale change. */
-  onUpdateLocale?: (locale: string | null) => void;
 }
 
 /**

@@ -139,26 +139,6 @@ export const AccountView: React.FC = () => {
     }
   };
 
-  const handleUpdateLocale = async (newLocale: string | null) => {
-    try {
-      const res = await fetch("/api/account/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locale: newLocale || "en-US" })
-      });
-      if (res.ok) {
-        setMe((prev) => (prev ? { ...prev, locale: newLocale || "en-US" } : null));
-        const { setSystemLocale } = await import("../../utils/date");
-        setSystemLocale(newLocale || "en-US");
-        i18n.changeLanguage(newLocale || "en-US");
-      } else {
-        alert(await res.text());
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!PASSWORD_REGEX.test(newPassword)) {
@@ -253,7 +233,6 @@ export const AccountView: React.FC = () => {
           setUsernameFocused={setUsernameFocused}
           onUpdateUsername={handleUpdateUsername}
           onUpdateTimezone={handleUpdateTimezone}
-          onUpdateLocale={handleUpdateLocale}
         />
 
         <ChangePasswordCard
