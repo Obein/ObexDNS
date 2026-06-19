@@ -3,8 +3,7 @@ import { Button, InputGroup, Intent, Tooltip, Position } from "@blueprintjs/core
 import { Download, Edit2, Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {  Profile  } from "../types";
-
-const PROFILE_NAME_REGEX = /^[\p{L}\p{N}_ -]{1,30}$/u;
+import { PROFILE_NAME_REGEX } from "../../../utils/auth";
 
 export interface SettingsHeaderProps {
   profile: Profile | null;

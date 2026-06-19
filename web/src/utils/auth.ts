@@ -15,7 +15,7 @@ export const USERNAME_REGEX = /^[a-z_][a-z0-9_-]{4,31}$/;
  * Password validation regular expression.
  * Requirements: 12-100 characters containing letters, numbers, and special characters.
  */
-export const PASSWORD_REGEX = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{12,100}$/;
+export const PASSWORD_REGEX = /^[a-zA-Z\d~`!@#$%^&*()_\-+={[}\]|\\:;"'<,>.?\/]{12,100}$/;
 
 /**
  * Validates whether a username matches the required alphanumeric 5-15 character format.
@@ -89,3 +89,8 @@ export async function hashTotpToken(token: string, salt: string): Promise<string
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
 }
+
+export const ACCESS_KEY_REGEX = /^[a-zA-Z0-9]{6,12}$/;
+export const TOTP_TOKEN_REGEX = /^\d{6}$/;
+export const PROFILE_NAME_REGEX = /^[\p{L}\p{N}_ -]{1,30}$/u;
+export const AP_NAME_REGEX = /^[a-zA-Z0-9_-]{1,30}$/;

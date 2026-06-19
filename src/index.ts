@@ -2,6 +2,7 @@ import { Env, User, ExecutionContext } from './types';
 import { ScheduledEvent } from '@cloudflare/workers-types';
 import { readCsrfCookie, createCsrfCookie, generateId } from './lib/auth';
 import { generateLinuxSetupScript } from './utils/linuxSetup';
+import { ACCESS_KEY_REGEX } from './utils/validator';
 
 // Middleware imports
 import { applySecurityHeaders, getCurrentUser, validateCsrf } from './lib/middleware';
@@ -72,20 +73,10 @@ export default {
         return new Response("API Not Found", { status: 404 });
       }
 
-      // DNS-over-HTTPS (DoH) Route: /<6-12 digit profile key>
-      const profileKeyMatch = url.pathname.match(/^\/([a-zA-Z0-9]{6,12})$/);
-      const isDoHRequest = request.method === 'POST' || 
-                           url.searchParams.has('dns') || 
-                           request.headers.get('accept')?.includes('dns-message');
-                            
-      if (profileKeyMatch && isDoHRequest) {
-        return handleDoHRequest(request, env, ctx, profileKeyMatch[1]);
-      }
-
       // Linux Setup Script Route
       if (url.pathname === '/setup.sh') {
         const key = url.searchParams.get('key');
-        if (!key || !/^[a-zA-Z0-9]{6,12}$/.test(key)) {
+        if (!key || !ACCESS_KEY_REGEX.test(key)) {
           return new Response('Missing or invalid key parameter', { status: 400 });
         }
         const script = generateLinuxSetupScript(url.origin, key);
@@ -95,6 +86,17 @@ export default {
             'Cache-Control': 'no-cache'
           }
         });
+      }
+
+      // DNS-over-HTTPS (DoH) Route: /<6-12 digit profile key>
+      const rawKey = url.pathname.slice(1); 
+      const isKeyValid = ACCESS_KEY_REGEX.test(rawKey);
+      const isDoHRequest = request.method === 'POST' || 
+                           url.searchParams.has('dns') || 
+                           request.headers.get('accept')?.includes('dns-message');
+                            
+      if (isKeyValid && isDoHRequest) {
+        return handleDoHRequest(request, env, ctx, rawKey);
       }
 
       // Static Assets Hosting with Single Page App (SPA) fallback
