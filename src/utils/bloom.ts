@@ -51,9 +51,8 @@ export class BloomFilter {
    * @param element 字符串元素
    */
   add(element: string): void {
-    const data = BloomFilter.encoder.encode(element);
-    const h1 = this.fnv1a(data, BloomFilter.FNV_SEED_0);
-    const h2 = this.fnv1a(data, BloomFilter.FNV_SEED_1);
+    const h1 = this.fnv1aString(element, BloomFilter.FNV_SEED_0);
+    const h2 = this.fnv1aString(element, BloomFilter.FNV_SEED_1);
 
     for (let i = 0; i < this.hashes; i++) {
       // Double Hashing: (h1 + i * h2) % m
@@ -69,9 +68,8 @@ export class BloomFilter {
    * @param element 待检测字符串
    */
   test(element: string): boolean {
-    const data = BloomFilter.encoder.encode(element);
-    const h1 = this.fnv1a(data, BloomFilter.FNV_SEED_0);
-    const h2 = this.fnv1a(data, BloomFilter.FNV_SEED_1);
+    const h1 = this.fnv1aString(element, BloomFilter.FNV_SEED_0);
+    const h2 = this.fnv1aString(element, BloomFilter.FNV_SEED_1);
 
     for (let i = 0; i < this.hashes; i++) {
       const pos = (h1 + i * h2) % this.size;
@@ -114,6 +112,19 @@ export class BloomFilter {
     let hash = seed >>> 0;
     for (let i = 0; i < data.length; i++) {
       hash ^= data[i];
+      hash = Math.imul(hash, BloomFilter.FNV_PRIME);
+    }
+    return hash >>> 0;
+  }
+
+  /**
+   * 基础 FNV-1a 哈希实现，直接操作 string 字符以避免内存分配和 TextEncoder 性能开销
+   */
+  private fnv1aString(str: string, seed: number): number {
+    let hash = seed >>> 0;
+    const len = str.length;
+    for (let i = 0; i < len; i++) {
+      hash ^= str.charCodeAt(i) & 0xff;
       hash = Math.imul(hash, BloomFilter.FNV_PRIME);
     }
     return hash >>> 0;

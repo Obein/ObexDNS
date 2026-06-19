@@ -49,7 +49,8 @@ export async function handleScheduled(
       const syncIntervalSec = Number(env.SYNC_PROFILE_INTERVAL_SEC) || 86400;
       const cutoffTime = now - syncIntervalSec;
       const profileModel = new ProfileModel(env.DB);
-      const syncTargets = await profileModel.getSyncTargets(cutoffTime, 10);
+      const batchSize = Number(env.SYNC_BATCH_SIZE) || 3;
+      const syncTargets = await profileModel.getSyncTargets(cutoffTime, batchSize);
 
       for (const target of syncTargets) {
         ctx.waitUntil(syncProfileLists(target.id, env, ctx));
