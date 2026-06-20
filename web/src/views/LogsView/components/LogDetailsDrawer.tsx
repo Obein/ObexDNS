@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { formatDateTime } from "../../../utils/date";
 import type {  LogEntry  } from "../types";
 import { getFlagEmoji } from "../../../utils/getFlagEmoji";
+import { getProfileLogDetails } from "../../../services";
 
 export interface LogDetailsDrawerProps {
   isDrawerOpen: boolean;
@@ -63,15 +64,11 @@ export const LogDetailsDrawer: React.FC<LogDetailsDrawerProps> = ({
       setDetailedLog(null);
       
       const controller = new AbortController();
-      fetch(`/api/profiles/${profileId}/logs/${selectedLog.id}`, { signal: controller.signal })
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch log details");
-          return res.json();
-        })
-        .then((data) => {
+      getProfileLogDetails(profileId, selectedLog.id, { signal: controller.signal })
+        .then((data: any) => {
           setDetailedLog(data);
         })
-        .catch((err) => {
+        .catch((err: any) => {
           if (err.name !== "AbortError") {
             console.error(err);
           }
