@@ -12,7 +12,8 @@ import { ProfileRoutes } from "./routes/ProfileRoutes";
 import type { Profile } from "./services";
 import { useTheme } from "./hooks/useTheme";
 import { usePageMeta } from "./hooks/usePageMeta";
-import { useAuthAndProfiles } from "./hooks/useAuthAndProfiles";
+import { useAuth } from "./hooks/useAuth";
+import { useProfiles } from "./hooks/useProfiles";
 
 const AuthView = lazyWithPreload(() =>
   import("./components/AuthView").then((m) => ({ default: m.AuthView })),
@@ -34,8 +35,13 @@ function App() {
   const pageMeta = usePageMeta();
   const {
     isLoggedIn,
-    profiles,
     currentUser,
+    checkAuth,
+    handleLogout,
+  } = useAuth(toasterRef);
+
+  const {
+    profiles,
     selectedProfile,
     setSelectedProfile,
     showCreateDialog,
@@ -45,12 +51,11 @@ function App() {
     createError,
     prefilledRule,
     setPrefilledRule,
-    checkAuthAndFetchData,
+    fetchProfiles,
     handleCreateProfile,
     handleDeleteProfile,
-    handleLogout,
     handleQuickAction,
-  } = useAuthAndProfiles(toasterRef);
+  } = useProfiles(isLoggedIn);
 
   if (isLoggedIn === null) {
     return (
@@ -77,7 +82,7 @@ function App() {
         </Helmet>
         <GitHubCorner />
         <OverlayToaster position="bottom" ref={toasterRef} />
-        <AuthView onSuccess={checkAuthAndFetchData} />
+        <AuthView onSuccess={checkAuth} />
       </Suspense>
     );
   }
@@ -117,7 +122,7 @@ function App() {
               onDelete={handleDeleteProfile}
               handleLogout={handleLogout}
               navigate={navigate}
-              onRefresh={checkAuthAndFetchData}
+              onRefresh={fetchProfiles}
             />
           }
         />

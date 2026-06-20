@@ -1,25 +1,10 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useLocation } from "react-router-dom";
 import type { OverlayToaster } from "@blueprintjs/core";
 import { getAccessToken, setAccessToken } from "../utils/token";
 import { setSystemTimeZone, setSystemLocale } from "../utils/date";
-import {
-  refresh,
-  getProfiles,
-  getMe,
-  createProfile,
-  deleteProfile,
-  logout,
-  ApiError
-} from "../services";
-import type { Profile, UserInfo } from "../services";
-
-interface PrefilledRule {
-  domain: string;
-  type: "ALLOW" | "BLOCK" | "REDIRECT";
-  recordType?: string;
-}
+import { refresh, getMe, logout, ApiError } from "../services";
+import type { UserInfo } from "../services";
 
 /**
  * Helper to clear the CSRF cookie.
@@ -29,32 +14,16 @@ const clearCsrfToken = () => {
 };
 
 /**
- * Custom hook managing authentication, profiles list, selected profile,
- * dialog states, prefilled rules, and global unauthorized events.
+ * Custom hook managing authentication, current user details, and global unauthorized events.
  *
  * @param toasterRef - Ref to the Blueprint OverlayToaster to show authorization errors.
  */
-export function useAuthAndProfiles(
-  toasterRef: React.RefObject<OverlayToaster | null>
-) {
+export function useAuth(toasterRef: React.RefObject<OverlayToaster | null>) {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [currentUser, setCurrentUser] = useState<UserInfo | null>(null);
-  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
-
-  // Profile creation states
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newProfileName, setNewProfileName] = useState("");
-  const [createError, setCreateError] = useState("");
-
-  // Quick Action / Prefilled Rule states
-  const [prefilledRule, setPrefilledRule] = useState<PrefilledRule | null>(null);
-
-  const navigate = useNavigate();
-  const location = useLocation();
   const { t, i18n } = useTranslation();
 
-  const checkAuthAndFetchData = async () => {
+  const checkAuth = async () => {
     try {
       // Check if we have a csrf_token cookie.
       const hasCsrfToken = document.cookie.includes("csrf_token=");
@@ -75,13 +44,9 @@ export function useAuthAndProfiles(
         }
       }
 
-      // Fetch data (uses token automatically via fetch interceptor).
+      // Fetch user data (uses token automatically via fetch interceptor).
       try {
-        const [profilesData, meData] = await Promise.all([
-          getProfiles(),
-          getMe(),
-        ]);
-        setProfiles(profilesData);
+        const meData = await getMe();
         setCurrentUser(meData);
 
         if (meData.timezone) {
@@ -104,7 +69,7 @@ export function useAuthAndProfiles(
   };
 
   useEffect(() => {
-    checkAuthAndFetchData();
+    checkAuth();
   }, []);
 
   // Listen for unauthorized events from the API client / interceptor
@@ -112,7 +77,6 @@ export function useAuthAndProfiles(
     const handleUnauthorized = (e: Event) => {
       clearCsrfToken();
       setIsLoggedIn(false);
-      setSelectedProfile(null);
 
       const customEvent = e as CustomEvent<{ reason?: string }>;
       const reason = customEvent.detail?.reason;
@@ -148,33 +112,6 @@ export function useAuthAndProfiles(
     };
   }, [t, toasterRef]);
 
-  const handleCreateProfile = async () => {
-    if (!newProfileName) return;
-    try {
-      await createProfile(newProfileName);
-      setNewProfileName("");
-      setShowCreateDialog(false);
-      await checkAuthAndFetchData();
-    } catch (err: any) {
-      if (err instanceof ApiError) {
-        setCreateError(err.bodyText);
-      } else {
-        setCreateError(t("common.errorNetwork"));
-      }
-    }
-  };
-
-  const handleDeleteProfile = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (!confirm(t("common.confirmDelete"))) return;
-    try {
-      await deleteProfile(id);
-      await checkAuthAndFetchData();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const handleLogout = async () => {
     try {
       await logout();
@@ -183,41 +120,14 @@ export function useAuthAndProfiles(
     } finally {
       clearCsrfToken();
       setIsLoggedIn(false);
-      setSelectedProfile(null);
       window.location.reload();
-    }
-  };
-
-  const handleQuickAction = (
-    domain: string,
-    type: "ALLOW" | "BLOCK" | "REDIRECT",
-    recordType?: string
-  ) => {
-    setPrefilledRule({ domain, type, recordType });
-    const profileId = selectedProfile?.id || location.pathname.split("/")[2];
-    if (profileId) {
-      navigate(`/dash/${profileId}/rules`);
     }
   };
 
   return {
     isLoggedIn,
-    profiles,
     currentUser,
-    selectedProfile,
-    setSelectedProfile,
-    showCreateDialog,
-    setShowCreateDialog,
-    newProfileName,
-    setNewProfileName,
-    createError,
-    setCreateError,
-    prefilledRule,
-    setPrefilledRule,
-    checkAuthAndFetchData,
-    handleCreateProfile,
-    handleDeleteProfile,
+    checkAuth,
     handleLogout,
-    handleQuickAction,
   };
 }
