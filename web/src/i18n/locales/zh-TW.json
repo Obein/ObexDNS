@@ -98,6 +98,7 @@
     "refreshStatus": "重新整理狀態",
     "egressIp": "出口 IP 地址",
     "currentLocation": "當前位置",
+    "edgeServer": "邊緣伺服器",
     "dohUrlTitle": "當前配置 DoH URL",
     "accessPointTitle": "Access DoH URL",
     "defaultAccessPointName": "裝置-1",

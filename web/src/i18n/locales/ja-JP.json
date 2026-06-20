@@ -98,6 +98,7 @@
     "refreshStatus": "ステータスを更新",
     "egressIp": "送信元 IP アドレス",
     "currentLocation": "現在地",
+    "edgeServer": "エッジサーバー",
     "dohUrlTitle": "現在の設定の DoH URL",
     "accessPointTitle": "アクセス用 DoH URL",
     "defaultAccessPointName": "デバイス-1",

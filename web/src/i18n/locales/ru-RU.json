@@ -98,6 +98,7 @@
     "refreshStatus": "Обновить статус",
     "egressIp": "Исходящий IP",
     "currentLocation": "Текущее местоположение",
+    "edgeServer": "Edge-сервер",
     "dohUrlTitle": "Текущий URL DoH",
     "accessPointTitle": "Access DoH URL",
     "defaultAccessPointName": "Устройство-1",

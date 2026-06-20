@@ -98,6 +98,7 @@
     "refreshStatus": "Actualizar estado",
     "egressIp": "Dirección IP de salida",
     "currentLocation": "Ubicación actual",
+    "edgeServer": "Servidor Edge",
     "dohUrlTitle": "URL de DoH del perfil actual",
     "accessPointTitle": "URL de acceso DoH",
     "defaultAccessPointName": "dispositivo-1",

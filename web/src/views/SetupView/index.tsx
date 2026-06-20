@@ -55,6 +55,8 @@ export const SetupView: React.FC<SetupViewProps> = ({ profileId, profileKey, toa
   const [substituteDomainIpv6, setSubstituteDomainIpv6] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string>("CN");
   const [showIp, setShowIp] = useState(false);
+  const [showLocation, setShowLocation] = useState(false);
+  const [traceInfo, setTraceInfo] = useState<{ colo: string; raw: string } | null>(null);
   const [serverRegions, setServerRegions] = useState<Record<string, RegionConfigItem>>({});
   const [verifyResult, setVerifyResult] = useState<{ success: boolean; profileMatch: boolean } | null>(null);
 
@@ -118,14 +120,37 @@ export const SetupView: React.FC<SetupViewProps> = ({ profileId, profileKey, toa
     setIsVerifying(true);
     setVerifyResult(null);
     try {
-      const [clientRes, regionsRes] = await Promise.all([
+      const [clientRes, regionsRes, traceResult] = await Promise.all([
         fetch("/api/clientinfo"),
         fetch("/api/regions"),
+        fetch("/cdn-cgi/trace")
+          .then(async (res) => {
+            if (res.ok) {
+              const text = await res.text();
+              const traceLines = text.split("\n");
+              const data: Record<string, string> = {};
+              for (const line of traceLines) {
+                const eqIdx = line.indexOf("=");
+                if (eqIdx !== -1) {
+                  const key = line.slice(0, eqIdx).trim();
+                  const val = line.slice(eqIdx + 1).trim();
+                  data[key] = val;
+                }
+              }
+              return { colo: data["colo"] || "UNKNOWN", raw: text };
+            }
+            return null;
+          })
+          .catch((e) => {
+            console.warn("Failed to fetch /cdn-cgi/trace:", e);
+            return null;
+          }),
       ]);
 
       const clientData = await clientRes.json();
       const regionsData = await regionsRes.json();
       setClientInfo(clientData);
+      setTraceInfo(traceResult);
 
       if (clientData.timezone && clientData.timezone !== "UNKNOWN") {
         setSystemTimeZone(clientData.timezone);
@@ -227,6 +252,9 @@ export const SetupView: React.FC<SetupViewProps> = ({ profileId, profileKey, toa
         clientInfo={clientInfo}
         showIp={showIp}
         setShowIp={setShowIp}
+        showLocation={showLocation}
+        setShowLocation={setShowLocation}
+        traceInfo={traceInfo}
       />
 
       <DohUrlCard 
