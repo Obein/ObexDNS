@@ -112,7 +112,7 @@ export default {
           try {
              const upstreams = env.PRESET_UPSTREAMS ? JSON.parse(env.PRESET_UPSTREAMS) : null;
              const filters = env.PRESET_EXTERNAL_FILTERS ? JSON.parse(env.PRESET_EXTERNAL_FILTERS) : null;
-             configStr = JSON.stringify({ upstreams, filters });
+             configStr = JSON.stringify({ upstreams, filters, nonce });
           } catch (e) { }
           
           return new HTMLRewriter()
