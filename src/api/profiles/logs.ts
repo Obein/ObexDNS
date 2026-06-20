@@ -39,6 +39,8 @@ export async function handleProfileLogsAndAnalyticsRequest(
     const status = urlParams.get('status');
     const search = urlParams.get('search');
     const accessPointId = urlParams.get('access_point_id');
+    const destCountry = urlParams.get('dest_country');
+    const isp = urlParams.get('isp');
     const startParam = urlParams.get('start');
     const endParam = urlParams.get('end');
     
@@ -78,7 +80,9 @@ export async function handleProfileLogsAndAnalyticsRequest(
       search: search || undefined,
       before: before ? parseInt(before) : undefined,
       limit,
-      access_point_id: accessPointId || undefined
+      access_point_id: accessPointId || undefined,
+      dest_country: destCountry || undefined,
+      isp: isp || undefined
     });
     return new Response(JSON.stringify(results), { headers: { 'Content-Type': 'application/json' } });
   }
@@ -138,8 +142,7 @@ export async function handleProfileLogsAndAnalyticsRequest(
         return new Response(JSON.stringify(destinations), { headers: { 'Content-Type': 'application/json' } });
       }
       if (subResource === 'isps') {
-        const countryCode = urlParams.get('country_code');
-        if (!countryCode) return new Response("country_code is required", { status: 400 });
+        const countryCode = urlParams.get('country_code') || undefined;
         const limitParam = urlParams.get('limit');
         const limit = limitParam ? parseInt(limitParam, 10) : undefined;
         const isps = await logModel.getISPByCountry(profileId, countryCode, since, until, accessPointId, limit !== undefined && !isNaN(limit) ? limit : undefined);

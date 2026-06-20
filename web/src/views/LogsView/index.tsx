@@ -27,6 +27,10 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [accessPointIdFilter, setAccessPointIdFilter] = useState<string | null>(null);
   const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([]);
+  const [destCountryFilter, setDestCountryFilter] = useState<string | null>(null);
+  const [countries, setCountries] = useState<{ country_code: string; country: string }[]>([]);
+  const [ispFilter, setIspFilter] = useState<string | null>(null);
+  const [isps, setIsps] = useState<{ name: string; count: number }[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [hasMore, setHasMore] = useState(true);
   const [realtimeRefresh, setRealtimeRefresh] = useState(false);
@@ -75,6 +79,39 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
       .catch(console.error);
   }, [profileId]);
 
+  useEffect(() => {
+    fetch(`/api/profiles/${profileId}/analytics/destinations?range=30d`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const filtered = data
+            .filter((item: any) => item.country_code)
+            .map((item: any) => ({
+              country_code: item.country_code,
+              country: item.country || item.country_code,
+            }));
+          setCountries(filtered);
+        }
+      })
+      .catch((e) => console.error("Failed to fetch destinations for filter", e));
+  }, [profileId]);
+
+  useEffect(() => {
+    setIspFilter(null);
+    let url = `/api/profiles/${profileId}/analytics/isps?range=30d`;
+    if (destCountryFilter) {
+      url += `&country_code=${destCountryFilter}`;
+    }
+    fetch(url)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setIsps(data);
+        }
+      })
+      .catch((e) => console.error("Failed to fetch ISPs for filter", e));
+  }, [profileId, destCountryFilter]);
+
   const fetchLogs = async (currentRange: TimeRange, isInitial: boolean = true, isAutoRefresh: boolean = false) => {
     // Abort the previous request if it's still running
     if (abortControllerRef.current) {
@@ -99,6 +136,8 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
       }
       if (statusFilter) url += `&status=${statusFilter}`;
       if (accessPointIdFilter) url += `&access_point_id=${accessPointIdFilter}`;
+      if (destCountryFilter) url += `&dest_country=${destCountryFilter}`;
+      if (ispFilter) url += `&isp=${encodeURIComponent(ispFilter)}`;
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
       if (!isInitial && logs.length > 0) {
         url += `&before=${logs[logs.length - 1].timestamp}`;
@@ -171,7 +210,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
   const loadMore = useCallback(() => {
     if (realtimeRefresh) return;
     if (!loading && !loadingMore && hasMore) fetchLogs(range, false);
-  }, [loading, loadingMore, hasMore, range, profileId, statusFilter, accessPointIdFilter, searchQuery, logs, customRange, realtimeRefresh]);
+  }, [loading, loadingMore, hasMore, range, profileId, statusFilter, accessPointIdFilter, destCountryFilter, ispFilter, searchQuery, logs, customRange, realtimeRefresh]);
 
   const lastLogElementRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -192,7 +231,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
     if (range === "custom" && (!customRange.start || !customRange.end)) return;
     const timer = setTimeout(() => fetchLogs(range, true), searchQuery ? 500 : 0);
     return () => clearTimeout(timer);
-  }, [profileId, range, statusFilter, accessPointIdFilter, searchQuery, customRange, realtimeRefresh]);
+  }, [profileId, range, statusFilter, accessPointIdFilter, destCountryFilter, ispFilter, searchQuery, customRange, realtimeRefresh]);
 
   useEffect(() => {
     const autoRefreshTimer = setInterval(() => {
@@ -208,7 +247,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
       }
     }, 2000);
     return () => clearInterval(autoRefreshTimer);
-  }, [profileId, range, searchQuery, realtimeRefresh, statusFilter, accessPointIdFilter]);
+  }, [profileId, range, searchQuery, realtimeRefresh, statusFilter, accessPointIdFilter, destCountryFilter, ispFilter]);
 
   const nowStr = new Date().toLocaleString("sv-SE").replace(" ", "T").slice(0, 16);
 
@@ -236,6 +275,12 @@ export const LogsView: React.FC<LogsViewProps> = ({ profileId, onQuickAction }) 
         accessPointIdFilter={accessPointIdFilter}
         setAccessPointIdFilter={setAccessPointIdFilter}
         accessPoints={accessPoints}
+        destCountryFilter={destCountryFilter}
+        setDestCountryFilter={setDestCountryFilter}
+        countries={countries}
+        ispFilter={ispFilter}
+        setIspFilter={setIspFilter}
+        isps={isps}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         stats={stats}

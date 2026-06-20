@@ -28,7 +28,7 @@ export class LogModel {
     return result.success;
   }
 
-  async getLogs(profileId: string, options: { since: number, until: number, status?: string, search?: string, before?: number, limit?: number, access_point_id?: string }): Promise<ResolutionLog[]> {
+  async getLogs(profileId: string, options: { since: number, until: number, status?: string, search?: string, before?: number, limit?: number, access_point_id?: string, dest_country?: string, isp?: string }): Promise<ResolutionLog[]> {
     let queryStr = `
       SELECT l.id, l.timestamp, l.domain, l.action, l.record_type, l.latency, l.answer, l.geo_country, l.reason, l.access_point_id, ap.name as access_point_name 
       FROM logs l
@@ -41,6 +41,8 @@ export class LogModel {
     if (options.search) { queryStr += " AND l.domain LIKE ?"; params.push(`%${options.search}%`); }
     if (options.before) { queryStr += " AND l.timestamp < ?"; params.push(options.before); }
     if (options.access_point_id) { queryStr += " AND l.access_point_id = ?"; params.push(options.access_point_id); }
+    if (options.dest_country) { queryStr += " AND json_extract(l.dest_geoip, '$.country_code') = ?"; params.push(options.dest_country.toUpperCase()); }
+    if (options.isp) { queryStr += " AND json_extract(l.dest_geoip, '$.isp') = ?"; params.push(options.isp); }
     
     let limit = options.limit !== undefined && !isNaN(options.limit) && options.limit > 0 ? options.limit : 50;
     if (limit > 100) {
@@ -172,7 +174,7 @@ export class LogModel {
     return results;
   }
 
-  async getISPByCountry(profileId: string, countryCode: string, since: number, until: number, accessPointId?: string, limit: number = 250) {
+  async getISPByCountry(profileId: string, countryCode: string | undefined, since: number, until: number, accessPointId?: string, limit: number = 250) {
     let queryStr = `
       SELECT 
         json_extract(dest_geoip, '$.isp') as name, 
@@ -181,10 +183,13 @@ export class LogModel {
       WHERE profile_id = ? 
         AND timestamp >= ? 
         AND timestamp <= ? 
-        AND json_extract(dest_geoip, '$.country_code') = ? 
         AND dest_geoip IS NOT NULL
     `;
-    let params: any[] = [profileId, since, until, countryCode.toUpperCase()];
+    let params: any[] = [profileId, since, until];
+    if (countryCode) {
+      queryStr += " AND json_extract(dest_geoip, '$.country_code') = ?";
+      params.push(countryCode.toUpperCase());
+    }
     if (accessPointId) { queryStr += " AND access_point_id = ?"; params.push(accessPointId); }
     queryStr += ` GROUP BY name ORDER BY count DESC LIMIT ${limit}`;
     const { results } = await this.db.prepare(queryStr).bind(...params).all<{ name: string | null, count: number }>();

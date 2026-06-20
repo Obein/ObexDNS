@@ -6,6 +6,7 @@ export interface GeoIP {
   country_code: string;
   city?: string;
   isp?: string;
+  org?: string;
   region?: string;
   as?: string;
 }
@@ -54,7 +55,7 @@ export async function fetchGeoIP(ip: string): Promise<GeoIP | null> {
   // Fetch from public API
   try {
     const response = await fetch(
-      `http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,isp,as`,
+      `http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,isp,org,as`,
       {
         cf: {
           cacheTtlByStatus: {
@@ -75,6 +76,7 @@ export async function fetchGeoIP(ip: string): Promise<GeoIP | null> {
         region: data.regionName,
         city: data.city,
         isp: data.isp,
+        org: data.org,
         as: data.as
       };
 

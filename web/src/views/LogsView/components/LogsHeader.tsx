@@ -6,6 +6,8 @@ import type { AccessPoint } from "../../../types/auth";
 import { TimeRangeSelector } from "./TimeRangeSelector";
 import { StatusFilter } from "./StatusFilter";
 import { AccessPointFilter } from "./AccessPointFilter";
+import { DestCountryFilter } from "./DestCountryFilter";
+import { IspFilter } from "./IspFilter";
 
 export interface LogsHeaderProps {
   range: TimeRange;
@@ -22,6 +24,12 @@ export interface LogsHeaderProps {
   accessPointIdFilter: string | null;
   setAccessPointIdFilter: (val: string | null) => void;
   accessPoints: AccessPoint[];
+  destCountryFilter: string | null;
+  setDestCountryFilter: (val: string | null) => void;
+  countries: { country_code: string; country: string }[];
+  ispFilter: string | null;
+  setIspFilter: (val: string | null) => void;
+  isps: { name: string; count: number }[];
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   stats: { total: number; pass: number; block: number; redirect: number } | null;
@@ -43,6 +51,12 @@ export const LogsHeader: React.FC<LogsHeaderProps> = ({
   accessPointIdFilter,
   setAccessPointIdFilter,
   accessPoints,
+  destCountryFilter,
+  setDestCountryFilter,
+  countries,
+  ispFilter,
+  setIspFilter,
+  isps,
   searchQuery,
   setSearchQuery,
   stats,
@@ -50,6 +64,15 @@ export const LogsHeader: React.FC<LogsHeaderProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
+
+  const hasActiveFilters = statusFilter !== null || accessPointIdFilter !== null || destCountryFilter !== null || ispFilter !== null;
+
+  const handleClearFilters = () => {
+    setStatusFilter(null);
+    setAccessPointIdFilter(null);
+    setDestCountryFilter(null);
+    setIspFilter(null);
+  };
 
   return (
     <div className={`p-4 ${isMobile && isCollapsed ? "space-y-0" : "space-y-4"} shrink-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800`}>
@@ -123,6 +146,14 @@ export const LogsHeader: React.FC<LogsHeaderProps> = ({
       {(!isMobile || !isCollapsed) && (
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
+            {hasActiveFilters && (
+              <Button
+                icon="filter-remove"
+                onClick={handleClearFilters}
+                variant="minimal"
+                title={t("logs.clearFilters")}
+              />
+            )}
             <StatusFilter
               statusFilter={statusFilter}
               setStatusFilter={setStatusFilter}
@@ -133,6 +164,22 @@ export const LogsHeader: React.FC<LogsHeaderProps> = ({
                 accessPointIdFilter={accessPointIdFilter}
                 setAccessPointIdFilter={setAccessPointIdFilter}
                 accessPoints={accessPoints}
+                isMobile={isMobile}
+              />
+            )}
+            {countries.length > 0 && (
+              <DestCountryFilter
+                destCountryFilter={destCountryFilter}
+                setDestCountryFilter={setDestCountryFilter}
+                countries={countries}
+                isMobile={isMobile}
+              />
+            )}
+            {isps.length > 0 && (
+              <IspFilter
+                ispFilter={ispFilter}
+                setIspFilter={setIspFilter}
+                isps={isps}
                 isMobile={isMobile}
               />
             )}
