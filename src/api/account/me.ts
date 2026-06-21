@@ -30,6 +30,7 @@ export async function handleMeRequest(
         totp_skip_password: !!(dbUser?.totp_skip_password),
         timezone: dbUser?.timezone || null,
         locale: dbUser?.locale || "en-US",
+        password_version: dbUser?.password_version ?? 1,
       }), { headers: { 'Content-Type': 'application/json' } });
     }
 

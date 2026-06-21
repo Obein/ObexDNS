@@ -94,6 +94,43 @@ export async function hashTotpToken(token: string, salt: string): Promise<string
     .join('');
 }
 
+/**
+ * Hashes a password on the client side using PBKDF2 with SHA-256 (600,000 iterations).
+ *
+ * @param password - The raw password.
+ * @param salt - The salt (usually the username, lowercase).
+ * @param iterations - The number of iterations (default 600000).
+ * @returns Hex-encoded client hash string (length 64, >= 256 bits).
+ */
+export async function hashPasswordClient(password: string, salt: string, iterations: number = 600000): Promise<string> {
+  const encoder = new TextEncoder();
+  const passwordBuffer = encoder.encode(password);
+  const saltBuffer = encoder.encode(salt.toLowerCase());
+
+  const baseKey = await crypto.subtle.importKey(
+    "raw",
+    passwordBuffer,
+    "PBKDF2",
+    false,
+    ["deriveBits", "deriveKey"]
+  );
+
+  const hashBuffer = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: saltBuffer,
+      iterations: iterations,
+      hash: "SHA-256"
+    },
+    baseKey,
+    256
+  );
+
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 export const ACCESS_KEY_REGEX = /^[a-zA-Z0-9]{6,12}$/;
 export const TOTP_TOKEN_REGEX = /^\d{6}$/;
 export const PROFILE_NAME_REGEX = /^[\p{L}\p{N}_ -]{1,30}$/u;

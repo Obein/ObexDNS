@@ -24,6 +24,7 @@ export interface PreloginPayload {
 export interface PreloginResponse {
   requires_password: boolean;
   requires_totp: boolean;
+  password_version?: number;
 }
 
 export interface LoginPayload {
@@ -36,6 +37,7 @@ export interface LoginPayload {
 
 export interface LoginResponse {
   accessToken: string;
+  needsMigration?: boolean;
 }
 
 export interface SignupPayload {

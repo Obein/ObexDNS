@@ -35,6 +35,7 @@ export interface User {
   last_resolve_at?: number;
   timezone?: string | null;
   locale?: string | null;
+  password_version?: number;
 }
 
 export interface UserActivityLog {

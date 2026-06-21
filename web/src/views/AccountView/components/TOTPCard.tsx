@@ -5,6 +5,7 @@ import type { UserInfo } from "../../../services";
 import { TOTPRecoveryKeys } from "./totp/TOTPRecoveryKeys";
 import { TOTPEnabledState } from "./totp/TOTPEnabledState";
 import { TOTPSetupForm } from "./totp/TOTPSetupForm";
+import { hashPasswordClient } from "../../../utils/auth";
 
 export interface TOTPCardProps {
   user: UserInfo;
@@ -99,7 +100,11 @@ export const TOTPCard: React.FC<TOTPCardProps> = ({ user, onRefresh }) => {
     setDisableLoading(true);
     setDisableError("");
     try {
-      await disableTotp(disablePassword);
+      let passwordPayload = disablePassword;
+      if (user.password_version === 2) {
+        passwordPayload = await hashPasswordClient(disablePassword, user.username);
+      }
+      await disableTotp(passwordPayload);
       setDisableDialogOpen(false);
       setDisablePassword("");
       onRefresh();

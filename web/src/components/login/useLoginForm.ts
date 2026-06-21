@@ -3,10 +3,11 @@ import { useTranslation } from "react-i18next";
 import {
   validateUsername,
   isPasswordLeaked,
-  hashTotpToken
+  hashTotpToken,
+  hashPasswordClient
 } from "../../utils/auth";
 import { setAccessToken } from "../../utils/token";
-import { prelogin, login, ApiError } from "../../services";
+import { prelogin, login, ApiError, migratePassword } from "../../services";
 
 interface AuthConfig {
   turnstile_site_key: string;
@@ -40,6 +41,7 @@ export const useLoginForm = ({
   const [totpToken, setTotpToken] = useState("");
   const [recoveryKey, setRecoveryKey] = useState("");
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
+  const [passwordVersion, setPasswordVersion] = useState<number>(1);
 
   // Server response step requirements
   const [requiresPassword, setRequiresPassword] = useState(true);
@@ -133,6 +135,7 @@ export const useLoginForm = ({
       const data = await prelogin({ username, turnstileToken });
       setRequiresPassword(data.requires_password);
       setRequiresTotp(data.requires_totp);
+      setPasswordVersion(data.password_version ?? 1);
       setLoginStep(2);
     } catch (err: any) {
       if (err instanceof ApiError) {
@@ -162,7 +165,13 @@ export const useLoginForm = ({
       } = {
         keepLoggedIn
       };
-      if (requiresPassword) body.password = password;
+      if (requiresPassword) {
+        if (passwordVersion === 2) {
+          body.password = await hashPasswordClient(password, username);
+        } else {
+          body.password = password;
+        }
+      }
       if (requiresTotp) {
         if (useRecovery) {
           body.recoveryKey = recoveryKey;
@@ -177,6 +186,10 @@ export const useLoginForm = ({
       const data = await login(body);
       if (data.accessToken) {
         setAccessToken(data.accessToken);
+      }
+      if (data.needsMigration) {
+        const clientHash = await hashPasswordClient(password, username);
+        await migratePassword(clientHash);
       }
       onSuccess();
     } catch (err: any) {

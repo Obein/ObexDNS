@@ -14,6 +14,7 @@ export interface UserInfo {
   role: "admin" | "user";
   timezone?: string | null;
   locale?: string | null;
+  password_version?: number;
 }
 
 export interface AccessPoint {

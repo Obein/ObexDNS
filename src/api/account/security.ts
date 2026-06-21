@@ -42,7 +42,7 @@ export async function handleSecurityRequest(
     } 
     // 否则使用旧密码校验
     else if (oldPassword) {
-      authenticated = await verifyPassword(oldPassword, dbUser.hashed_password);
+      authenticated = await verifyPassword(oldPassword, dbUser.hashed_password, dbUser.password_version ?? 1);
       if (!authenticated) {
         await activityLog.record(user.id, 'password_change_fail', clientIp, userAgent, { reason: 'wrong_current_password' });
         return new Response("Current password is incorrect", { status: 400 });
@@ -52,10 +52,30 @@ export async function handleSecurityRequest(
       return new Response("Authentication required (Old Password or TOTP)", { status: 400 });
     }
 
-    const hashedPassword = await hashPassword(newPassword);
-    await userModel.updatePassword(user.id, hashedPassword);
+    const hashedPassword = await hashPassword(newPassword, 2);
+    await userModel.updatePassword(user.id, hashedPassword, 2);
     await activityLog.record(user.id, 'password_change_success', clientIp, userAgent, { method: totpTokenHash ? 'totp' : 'password' });
     return new Response(JSON.stringify({ success: true }));
+  }
+
+  // POST /api/account/migrate-password (password migration to v2)
+  if (action === 'migrate-password' && request.method === 'POST') {
+    const { clientHash } = await request.json() as any;
+    if (!clientHash) {
+      return new Response("Missing clientHash", { status: 400 });
+    }
+    const dbUser = await userModel.getById(user.id);
+    if (!dbUser) return new Response("User not found", { status: 404 });
+
+    if ((dbUser.password_version ?? 1) === 1) {
+      const hashedPassword = await hashPassword(clientHash, 2);
+      await userModel.updatePassword(user.id, hashedPassword, 2);
+      await activityLog.record(user.id, 'password_change_success', clientIp, userAgent, { method: 'migration' });
+    }
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   // ─── TOTP 管理接口 (/api/account/totp/...) ───
@@ -112,7 +132,7 @@ export async function handleSecurityRequest(
       // If the user is in skip_password mode, they may not have a usable password — allow
       // them to disable via TOTP token instead
       if (!dbUser.totp_skip_password) {
-        if (!password || !(await verifyPassword(password, dbUser.hashed_password))) {
+        if (!password || !(await verifyPassword(password, dbUser.hashed_password, dbUser.password_version ?? 1))) {
           return new Response("Incorrect password", { status: 400 });
         }
       }

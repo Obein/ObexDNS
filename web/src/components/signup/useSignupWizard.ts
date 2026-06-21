@@ -4,7 +4,8 @@ import {
   validateUsername,
   validatePassword,
   isPasswordLeaked,
-  hashTotpToken
+  hashTotpToken,
+  hashPasswordClient
 } from "../../utils/auth";
 import {
   checkUsernameDuplicate as checkUsernameDuplicateService,
@@ -234,9 +235,10 @@ export const useSignupWizard = ({
     setLoading(true);
     setError("");
     try {
+      const clientHash = await hashPasswordClient(password, username);
       const data = await signup({
         username,
-        password,
+        password: clientHash,
         turnstileToken
       });
 

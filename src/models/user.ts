@@ -37,11 +37,11 @@ export class UserModel {
     return results;
   }
 
-  async create(user: { id: string, username: string, passwordHash: string, role: string, timezone?: string | null, locale?: string | null }): Promise<boolean> {
+  async create(user: { id: string, username: string, passwordHash: string, role: string, timezone?: string | null, locale?: string | null, passwordVersion?: number }): Promise<boolean> {
     const now = Math.floor(Date.now() / 1000);
     const result = await this.db.prepare(
-      "INSERT INTO users (id, username, hashed_password, role, created_at, timezone, locale) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    ).bind(user.id, user.username, user.passwordHash, user.role, now, user.timezone || null, user.locale || 'en-US').run();
+      "INSERT INTO users (id, username, hashed_password, role, created_at, timezone, locale, password_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(user.id, user.username, user.passwordHash, user.role, now, user.timezone || null, user.locale || 'en-US', user.passwordVersion ?? 2).run();
     return result.success;
   }
 
@@ -60,8 +60,8 @@ export class UserModel {
     return result.success;
   }
 
-  async updatePassword(id: string, passwordHash: string): Promise<boolean> {
-    const result = await this.db.prepare("UPDATE users SET hashed_password = ? WHERE id = ?").bind(passwordHash, id).run();
+  async updatePassword(id: string, passwordHash: string, passwordVersion: number = 2): Promise<boolean> {
+    const result = await this.db.prepare("UPDATE users SET hashed_password = ?, password_version = ? WHERE id = ?").bind(passwordHash, passwordVersion, id).run();
     return result.success;
   }
 

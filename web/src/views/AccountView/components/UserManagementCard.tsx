@@ -3,7 +3,7 @@ import { Card, Elevation, H4, Button, Intent, HTMLTable, Dialog, FormGroup, Inpu
 import { ShieldCheck, UserPlus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { formatDateTime } from "../../../utils/date";
-import { PASSWORD_REGEX, USERNAME_REGEX } from "../../../utils/auth";
+import { PASSWORD_REGEX, USERNAME_REGEX, hashPasswordClient } from "../../../utils/auth";
 import type { UserInfo } from "../../../services";
 import { createUser, deleteUser } from "../../../services";
 
@@ -27,7 +27,8 @@ export const UserManagementCard: React.FC<UserManagementCardProps> = ({ users, c
     if (!PASSWORD_REGEX.test(newUserPassword)) { alert(t("account.formatTipPassword")); return; }
     setCreateLoading(true);
     try {
-      await createUser({ username: newUsername, password: newUserPassword, role: newUserRole });
+      const clientHash = await hashPasswordClient(newUserPassword, newUsername);
+      await createUser({ username: newUsername, password: clientHash, role: newUserRole });
       setIsDialogOpen(false);
       setNewUsername("");
       setNewUserPassword("");

@@ -33,10 +33,10 @@ export async function handleAdminRequest(
       if (!password || !PASSWORD_REGEX.test(password)) {
         return new Response("Password format error", { status: 400 });
       }
-      const hashedPassword = await hashPassword(password);
+      const hashedPassword = await hashPassword(password, 2);
       const userId = generateId(15);
       try {
-        await userModel.create({ id: userId, username, passwordHash: hashedPassword, role: role || 'user' });
+        await userModel.create({ id: userId, username, passwordHash: hashedPassword, role: role || 'user', passwordVersion: 2 });
         return new Response(JSON.stringify({ id: userId }), { status: 201 });
       } catch (e: any) {
         return new Response(e.message, { status: 400 });

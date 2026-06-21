@@ -2,7 +2,7 @@
  * Simple PBKDF2 implementation using Web Crypto API for Cloudflare Workers
  */
 
-export async function hashPassword(password: string): Promise<string> {
+export async function hashPassword(password: string, version: number = 1): Promise<string> {
   const encoder = new TextEncoder();
   const passwordBuffer = encoder.encode(password);
   
@@ -18,12 +18,14 @@ export async function hashPassword(password: string): Promise<string> {
     ["deriveBits", "deriveKey"]
   );
   
+  const iterations = version === 2 ? 1000 : 100000;
+  
   // Derive the hash
   const hashBuffer = await crypto.subtle.deriveBits(
     {
       name: "PBKDF2",
       salt: salt,
-      iterations: 100000,
+      iterations: iterations,
       hash: "SHA-256"
     },
     baseKey,
@@ -38,7 +40,7 @@ export async function hashPassword(password: string): Promise<string> {
   return btoa(String.fromCharCode(...combined));
 }
 
-export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+export async function verifyPassword(password: string, storedHash: string, version: number = 1): Promise<boolean> {
   const encoder = new TextEncoder();
   const passwordBuffer = encoder.encode(password);
   
@@ -60,11 +62,13 @@ export async function verifyPassword(password: string, storedHash: string): Prom
     ["deriveBits", "deriveKey"]
   );
   
+  const iterations = version === 2 ? 1000 : 100000;
+  
   const testHash = await crypto.subtle.deriveBits(
     {
       name: "PBKDF2",
       salt: salt,
-      iterations: 100000,
+      iterations: iterations,
       hash: "SHA-256"
     },
     baseKey,
@@ -81,6 +85,7 @@ export async function verifyPassword(password: string, storedHash: string): Prom
   }
   return result === 0;
 }
+
 
 /**
  * Generates a secure random ID of the specified length.

@@ -3,6 +3,7 @@ import { Divider, Tag, Intent } from "@blueprintjs/core";
 import { ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { clsx } from "clsx";
+import { hashPasswordClient } from "../../utils/auth";
 
 import type { UserInfo } from "./types";
 import {
@@ -156,11 +157,22 @@ export const AccountView: React.FC = () => {
           .join("");
       }
 
+      if (!me) throw new Error("User information not loaded");
+
+      let oldPasswordPayload = oldPassword;
+      if (!useTotpForPw && oldPassword) {
+        if ((me.password_version ?? 1) === 2) {
+          oldPasswordPayload = await hashPasswordClient(oldPassword, me.username);
+        }
+      }
+
+      const newPasswordPayload = await hashPasswordClient(newPassword, me.username);
+
       await updatePassword({
-        oldPassword: useTotpForPw ? undefined : oldPassword,
+        oldPassword: useTotpForPw ? undefined : oldPasswordPayload,
         totpTokenHash: tokenPayload,
         totpSalt: saltPayload,
-        newPassword
+        newPassword: newPasswordPayload
       });
 
       setPwMessage({
