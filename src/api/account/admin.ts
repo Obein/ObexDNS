@@ -57,10 +57,14 @@ export async function handleAdminRequest(
     const systemSettings = new SystemSettingsModel(env.DB);
     if (request.method === 'GET') {
       const settings = await systemSettings.getAll();
+      // 敏感配置脱敏，jwt_secret 绝不能暴露给外部/客户端
+      delete settings.jwt_secret;
       return new Response(JSON.stringify(settings), { headers: { 'Content-Type': 'application/json' } });
     }
     if (request.method === 'PATCH') {
       const body = await request.json() as Record<string, string>;
+      // 禁止修改/覆盖敏感的 jwt_secret
+      delete body.jwt_secret;
       await systemSettings.setMany(body);
       return new Response(JSON.stringify({ success: true }));
     }

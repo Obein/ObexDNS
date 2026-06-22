@@ -11,7 +11,7 @@ import {
   Divider
 } from "@blueprintjs/core";
 import { hashPasswordClient, hashPin, hashTotpToken } from "../../../utils/auth";
-import { setPin } from "../../../services";
+import { setPin, ApiError } from "../../../services";
 import type { UserInfo } from "../../../services";
 import { DigitInput, type DigitInputRef } from "../../../components/DigitInput";
 
@@ -83,8 +83,14 @@ export const SetupPinDialog: React.FC<SetupPinDialogProps> = ({
       setVerifyPassword("");
       setVerifyTotp("");
       onSuccess();
-    } catch (err: any) {
-      setError(err.bodyText || err.message || t("common.errorNetwork"));
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.bodyText);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(t("common.errorNetwork"));
+      }
     } finally {
       setLoading(false);
     }

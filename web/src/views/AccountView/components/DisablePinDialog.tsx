@@ -11,7 +11,7 @@ import {
 } from "@blueprintjs/core";
 import { ShieldAlert } from "lucide-react";
 import { hashPasswordClient, hashTotpToken } from "../../../utils/auth";
-import { clearPin } from "../../../services";
+import { clearPin, ApiError } from "../../../services";
 import type { UserInfo } from "../../../services";
 import { DigitInput } from "../../../components/DigitInput";
 
@@ -65,8 +65,14 @@ export const DisablePinDialog: React.FC<DisablePinDialogProps> = ({
       setVerifyPassword("");
       setVerifyTotp("");
       onSuccess();
-    } catch (err: any) {
-      setError(err.bodyText || err.message || t("common.errorNetwork"));
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.bodyText);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(t("common.errorNetwork"));
+      }
     } finally {
       setLoading(false);
     }
