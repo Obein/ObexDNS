@@ -13,7 +13,7 @@ import {
   extractSaltHex, hmacSha256
 } from "../../lib/auth";
 import { importJwtSecret, signJWT, verifyJWT } from "../../lib/jwt";
-import { verifyPassword } from "../../utils/crypto";
+import { verifyPassword, verifyPinServer } from "../../utils/crypto";
 import { verifyTOTP, findMatchingRecoveryKey } from "../../lib/totp";
 import { UserModel } from "../../models/user";
 import { ActivityLogModel } from "../../models/activityLog";
@@ -320,7 +320,8 @@ export async function handleAuthSessionRequest(request: Request, env: Env): Prom
       const failedAttemptsState = await cacheUtils.get<{ count: number }>(cache, cacheKey);
       const failedAttempts = failedAttemptsState?.count || 0;
 
-      if (dbUser.pin_hash !== pinHash) {
+      const isPinValid = await verifyPinServer(pinHash, dbUser.pin_hash);
+      if (!isPinValid) {
         const nextFailedCount = failedAttempts + 1;
         if (nextFailedCount >= 3) {
           // 超过 3 次失败，销毁 Session 强制登出

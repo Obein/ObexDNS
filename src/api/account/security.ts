@@ -1,5 +1,5 @@
 import { Env, User, ExecutionContext } from "../../types";
-import { hashPassword, verifyPassword } from "../../utils/crypto";
+import { hashPassword, verifyPassword, hashPinServer } from "../../utils/crypto";
 import { generateTOTPSecret, getTOTPUri, generateRecoveryKeys, hashRecoveryKey, verifyTOTP } from "../../lib/totp";
 import { UserModel } from "../../models/user";
 import { ActivityLogModel } from "../../models/activityLog";
@@ -174,7 +174,8 @@ export async function handleSecurityRequest(
         return new Response("Invalid PIN hash format", { status: 400 });
       }
 
-      await userModel.updatePinHash(user.id, pinHash);
+      const serverPinHash = await hashPinServer(pinHash);
+      await userModel.updatePinHash(user.id, serverPinHash);
       return new Response(JSON.stringify({ success: true }));
     }
 
