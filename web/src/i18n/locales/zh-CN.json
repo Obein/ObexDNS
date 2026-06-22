@@ -103,7 +103,6 @@
     "use2fa": "使用双重验证码",
     "totpCode": "双重验证码",
     "currentPassword": "当前密码",
-    "passwordPlaceholder": "请输入当前密码",
     "disablePinWarning": "禁用 PIN 码将彻底关闭空闲会话锁定功能。",
     "pinFormatTip": "PIN 码必须为 4 位数字",
     "pinMatchTip": "两次输入的 PIN 码不匹配",

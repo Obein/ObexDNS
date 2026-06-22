@@ -103,7 +103,6 @@
     "use2fa": "Use 2FA Code",
     "totpCode": "2FA Code",
     "currentPassword": "Current Password",
-    "passwordPlaceholder": "Enter current password",
     "disablePinWarning": "Disabling the PIN will disable the inactivity session locking feature completely.",
     "pinFormatTip": "PIN must be exactly 4 digits",
     "pinMatchTip": "PINs do not match",
