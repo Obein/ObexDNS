@@ -94,7 +94,6 @@ export async function verifyPassword(password: string, storedHash: string, versi
   return result === 0;
 }
 
-
 /**
  * Generates a secure random ID of the specified length.
  */
