@@ -231,3 +231,11 @@ export async function hmacSha256(key: string, data: string): Promise<string> {
 export async function hashPin(pin: string, salt: string): Promise<string> {
   return hashPasswordClient(pin, salt);
 }
+
+/**
+ * Hashes the client pinHash with a nonce challenge.
+ * Uses 10,000 iterations to be fully compatible with Cloudflare Workers limits.
+ */
+export async function hashChallenge(pinHash: string, nonce: string): Promise<string> {
+  return hashPasswordClient(pinHash, nonce, 10000);
+}

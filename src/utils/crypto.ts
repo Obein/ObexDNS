@@ -178,3 +178,15 @@ export async function generateSessionHash(sessionId: string, userId: string): Pr
   const salt = new TextEncoder().encode(userId);
   return hashWithPBKDF2(sessionId, salt, 100, 256);
 }
+
+/**
+ * Hashes the client pinHash with a nonce challenge.
+ * Uses 10,000 iterations to be fully compatible with Cloudflare Workers limits.
+ */
+export async function hashChallenge(pinHash: string, nonce: string): Promise<string> {
+  const saltBytes = new TextEncoder().encode(nonce.toLowerCase());
+  const derived = await pbkdf2(pinHash, saltBytes, 10000, 256);
+  return Array.from(derived)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}

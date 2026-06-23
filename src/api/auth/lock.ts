@@ -1,7 +1,7 @@
 import { Env } from "../../types";
 import { getOrCreateJwtSecret, generateSessionHash } from "../../lib/auth";
 import { importJwtSecret, verifyJWT } from "../../lib/jwt";
-import { generateId, hashPin, verifyPassword } from "../../utils/crypto";
+import { generateId, verifyPassword, hashChallenge } from "../../utils/crypto";
 import { UserModel } from "../../models/user";
 import { ActivityLogModel } from "../../models/activityLog";
 import { SessionModel } from "../../models/session";
@@ -162,8 +162,8 @@ export async function handleSessionLockRequest(request: Request, env: Env): Prom
           await userModel.updatePinHash(payload.userId, pinHash);
         }
       } else {
-        // 验证挑战响应：hashPin(dbUser.pin_hash, cachedNonce)
-        const expectedChallengedHash = await hashPin(dbUser.pin_hash, cachedNonce);
+        // 验证挑战响应：hashChallenge(dbUser.pin_hash, cachedNonce)
+        const expectedChallengedHash = await hashChallenge(dbUser.pin_hash, cachedNonce);
         
         // Constant-time comparison
         if (pinHash.length === expectedChallengedHash.length) {
@@ -209,6 +209,7 @@ export async function handleSessionLockRequest(request: Request, env: Env): Prom
         headers: { "Content-Type": "application/json" }
       });
     } catch (e: any) {
+      console.error("Unlock session error:", e);
       return new Response("Unauthorized", { status: 401 });
     }
   }

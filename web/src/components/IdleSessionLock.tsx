@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Spinner, Card, Elevation, Callout, Intent } from "@blueprintjs/core";
 import { LogOut } from "lucide-react";
-import { hashPin } from "../utils/auth";
+import { hashPin, hashChallenge } from "../utils/auth";
 import { unlockSession, lockSession, getUnlockNonce, ApiError } from "../services";
 import type { UserInfo } from "../services";
 import LogoIcon from "../assets/obex_cat_eye_logo-256.webp";
@@ -120,7 +120,7 @@ export const IdleSessionLock: React.FC<IdleSessionLockProps> = ({
         await unlockSession(pinHash, nonce);
       } else {
         // Modern challenge-response flow
-        const challengedHash = await hashPin(pinHash, nonce);
+        const challengedHash = await hashChallenge(pinHash, nonce);
         await unlockSession(challengedHash, nonce);
       }
       
