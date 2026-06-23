@@ -150,15 +150,17 @@ export default {
     let response = await handleRequest();
     
     // Ensure CSRF token is set in cookies if authenticated but cookie is missing from the request
-    if (currentUser && !readCsrfCookie(request.headers.get("Cookie"))) {
+    const finalUser = currentUser as User | null;
+    if (finalUser && !readCsrfCookie(request.headers.get("Cookie"))) {
+      const isKeepLoggedIn = finalUser.sessionId?.startsWith("k_");
       try {
         const csrfToken = generateId(32);
-        response.headers.append("Set-Cookie", createCsrfCookie(csrfToken));
+        response.headers.append("Set-Cookie", createCsrfCookie(csrfToken, env, isKeepLoggedIn));
       } catch (e) {
         // If headers are immutable (e.g. from static asset fetch), clone the response and set the header
         const newHeaders = new Headers(response.headers);
         const csrfToken = generateId(32);
-        newHeaders.append("Set-Cookie", createCsrfCookie(csrfToken));
+        newHeaders.append("Set-Cookie", createCsrfCookie(csrfToken, env, isKeepLoggedIn));
         response = new Response(response.body, {
           status: response.status,
           statusText: response.statusText,

@@ -38,8 +38,14 @@ export function readRefreshTokenCookie(cookieHeader: string | null): string | nu
  * Returns a serialized Set-Cookie header string for a new CSRF token.
  * This cookie is not HttpOnly so that client-side JavaScript can read it to append the header.
  */
-export function createCsrfCookie(token: string): string {
-  return `csrf_token=${token}; SameSite=Lax; Path=/; Secure`;
+export function createCsrfCookie(token: string, env?: Env, keepLoggedIn?: boolean): string {
+  let maxAgeStr = "";
+  if (keepLoggedIn && env) {
+    const expirationDays = Number(env.OPTIONAL_SESSION_EXPIRATION_DAYS) || 30;
+    const maxAge = expirationDays * 24 * 60 * 60;
+    maxAgeStr = `; Max-Age=${maxAge}`;
+  }
+  return `csrf_token=${token}; SameSite=Lax; Path=/; Secure${maxAgeStr}`;
 }
 
 /**

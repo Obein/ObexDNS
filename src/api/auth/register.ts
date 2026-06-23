@@ -70,7 +70,7 @@ export async function handleAuthRegisterRequest(request: Request, env: Env): Pro
     const { session, refreshToken } = await createSession(env, userId, clientIp, userAgent, latitude, longitude, false);
     const refreshCookie = createRefreshTokenCookie(refreshToken, env, false);
     const csrfToken = generateId(32);
-    const csrfCookie = createCsrfCookie(csrfToken);
+    const csrfCookie = createCsrfCookie(csrfToken, env, false);
     
     const secret = await getOrCreateJwtSecret(env);
     const jwtKey = await importJwtSecret(secret);

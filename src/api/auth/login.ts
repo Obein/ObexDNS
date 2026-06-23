@@ -198,7 +198,7 @@ export async function handleLoginRequest(request: Request, env: Env): Promise<Re
     }
     const { session, refreshToken } = await createSession(env, userId, clientIp, userAgent, latitude, longitude, !!keepLoggedIn);
     const csrfToken = generateId(32);
-    const csrfCookie = createCsrfCookie(csrfToken);
+    const csrfCookie = createCsrfCookie(csrfToken, env, !!keepLoggedIn);
 
     const secret = await getOrCreateJwtSecret(env);
     const jwtKey = await importJwtSecret(secret);
