@@ -55,8 +55,16 @@ export const SetupPinDialog: React.FC<SetupPinDialogProps> = ({
     setError("");
 
     try {
-      const pinHashValue = await hashPin(newPin, user?.id || "");
-      
+      const userId = user?.id || sessionStorage.getItem("obex_user_id");
+      if (!userId) {
+        setError(t("auth.sessionExpired", "Session expired. Logging out..."));
+        setTimeout(() => {
+          handleClose();
+        }, 1500);
+        return;
+      }
+      const pinHashValue = await hashPin(newPin, userId);
+
       const verificationPayload: { password?: string; totpTokenHash?: string; totpSalt?: string } = {};
       if (user?.totp_enabled && useTotpForVerify) {
         const salt = crypto.randomUUID();
