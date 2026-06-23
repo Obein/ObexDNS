@@ -10,12 +10,36 @@ declare global {
  * Requirements: 5-15 alphanumeric characters only.
  */
 export const USERNAME_REGEX = /^[a-z_][a-z0-9_-]{4,31}$/;
-
 /**
  * Password validation regular expression.
  * Requirements: 12-100 characters containing letters, numbers, and special characters.
  */
 export const PASSWORD_REGEX = /^[a-zA-Z\d~`!@#$%^&*()_\-+={[}\]|\\:;"'<,>.?\/]{12,100}$/;
+/**
+ * Access key validation regular expression.
+ * Requirements: 6-12 alphanumeric characters only.
+ */
+export const ACCESS_KEY_REGEX = /^[a-zA-Z0-9]{6,12}$/;
+/**
+ * TOTP token validation regular expression.
+ * Requirements: exactly 6 digits.
+ */
+export const TOTP_TOKEN_REGEX = /^\d{6}$/;
+/**
+ * Profile name validation regular expression.
+ * Requirements: 1-30 characters, allowing letters, numbers, spaces, underscores, and hyphens.
+ */
+export const PROFILE_NAME_REGEX = /^[\p{L}\p{N}_ -]{1,30}$/u;
+/**
+ * Access Point (AP) name validation regular expression.
+ * Requirements: 1-30 characters, allowing letters, numbers, underscores, and hyphens.
+ */
+export const AP_NAME_REGEX = /^[a-zA-Z0-9_-]{1,30}$/;
+/**
+ * PIN validation regular expression.
+ * Requirements: exactly 4 digits.
+ */
+export const PIN_REGEX = /^\d{4}$/;
 
 /**
  * Validates whether a username matches the required alphanumeric 5-15 character format.
@@ -130,11 +154,6 @@ export async function hashPasswordClient(password: string, salt: string, iterati
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
 }
-
-export const ACCESS_KEY_REGEX = /^[a-zA-Z0-9]{6,12}$/;
-export const TOTP_TOKEN_REGEX = /^\d{6}$/;
-export const PROFILE_NAME_REGEX = /^[\p{L}\p{N}_ -]{1,30}$/u;
-export const AP_NAME_REGEX = /^[a-zA-Z0-9_-]{1,30}$/;
 
 /**
  * Converts a hexadecimal string to a Uint8Array.

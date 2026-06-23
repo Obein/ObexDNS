@@ -10,7 +10,7 @@ import {
   Classes,
   Divider
 } from "@blueprintjs/core";
-import { hashPasswordClient, hashPin, hashTotpToken } from "../../../utils/auth";
+import { hashPasswordClient, hashPin, hashTotpToken, PIN_REGEX } from "../../../utils/auth";
 import { setPin, ApiError } from "../../../services";
 import type { UserInfo } from "../../../services";
 import { DigitInput, type DigitInputRef } from "../../../components/DigitInput";
@@ -42,7 +42,7 @@ export const SetupPinDialog: React.FC<SetupPinDialogProps> = ({
 
   const handleSetupPin = async (e?: React.FormEvent, totpValue?: string) => {
     if (e) e.preventDefault();
-    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+    if (newPin.length !== 4 || !PIN_REGEX.test(newPin)) {
       setError(t("auth.pinFormatTip", "PIN must be exactly 4 digits"));
       return;
     }
