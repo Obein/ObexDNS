@@ -14,6 +14,8 @@ const clearCsrfToken = () => {
   try {
     sessionStorage.removeItem("obex_session_active");
     sessionStorage.removeItem("obex_session_locked");
+    sessionStorage.removeItem("obex_username");
+    sessionStorage.removeItem("obex_user_id");
   } catch {}
 };
 
@@ -52,6 +54,12 @@ export function useAuth(toasterRef: React.RefObject<OverlayToaster | null>) {
       try {
         const meData = await getMe();
         setCurrentUser(meData);
+        if (meData.username) {
+          sessionStorage.setItem("obex_username", meData.username);
+        }
+        if (meData.id) {
+          sessionStorage.setItem("obex_user_id", meData.id);
+        }
 
         if (meData.timezone) {
           setSystemTimeZone(meData.timezone);

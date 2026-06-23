@@ -101,7 +101,15 @@ export const IdleSessionLock: React.FC<IdleSessionLockProps> = ({
     setLoading(true);
     setError("");
     try {
-      const pinHash = await hashPin(pinToSubmit, currentUser?.id || "");
+      const userId = currentUser?.id || sessionStorage.getItem("obex_user_id");
+      if (!userId) {
+        setError(t("auth.sessionExpired", "Session expired. Logging out..."));
+        setTimeout(() => {
+          handleLogout();
+        }, 1500);
+        return;
+      }
+      const pinHash = await hashPin(pinToSubmit, userId);
       await unlockSession(pinHash);
       
       // Success! Unlock session
@@ -171,9 +179,14 @@ export const IdleSessionLock: React.FC<IdleSessionLockProps> = ({
                 alt="Obex DNS Logo"
                 className="w-20 h-20 object-contain"
               />
-              <h3 className="font-bold tracking-tight text-2xl mt-4 text-slate-900 dark:text-slate-100">
-                {currentUser?.username || "Admin"}
-              </h3>
+              {(() => {
+                const displayUsername = currentUser?.username || sessionStorage.getItem("obex_username") || "";
+                return displayUsername ? (
+                  <h3 className="font-bold tracking-tight text-2xl mt-4 text-slate-900 dark:text-slate-100">
+                    {displayUsername}
+                  </h3>
+                ) : null;
+              })()}
               <p className="text-gray-500 mt-2 text-center text-sm leading-relaxed">
                 {t("auth.sessionLocked", "Session Locked due to inactivity")}
               </p>
