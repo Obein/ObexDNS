@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "npm run db:migrate:dev && concurrently \"npm run ui:dev\" \"wrangler dev\"",
     "start": "npm run build && wrangler dev",
-    "deploy": "npm run build && npm run db:migrate:prod && wrangler deploy",
-    "deploy:skipdb": "npm run build && wrangler deploy",
+    "deploy": "npm audit fix && npm run build && npm run db:migrate:prod && wrangler deploy",
+    "deploy:skipdb": "npm audit fix && npm run build && wrangler deploy",
     "build": "npm run ui:build",
     "build:pages": "npm run ui:build && npx esbuild src/index.ts --bundle --outfile=static/_worker.js --platform=neutral --format=esm --minify --external:cloudflare:*",
     "postinstall": "npm run ui:install",
