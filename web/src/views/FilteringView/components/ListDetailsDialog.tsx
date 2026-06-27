@@ -23,9 +23,9 @@ export const ListDetailsDialog: React.FC<ListDetailsDialogProps> = ({ selectedLi
       icon="info-sign"
     >
       <div className="p-6 space-y-4">
-        {!selectedList?.enabled && (
-          <Callout intent={Intent.DANGER} title={t("filtering.syncError")} icon="error">
-            {selectedList?.sync_error || t("filtering.syncErrorDesc")}
+        {selectedList?.sync_error && (
+          <Callout intent={Intent.WARNING} title={t("filtering.syncError")} icon="warning-sign">
+            {selectedList.sync_error}
           </Callout>
         )}
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 break-all font-mono text-sm">

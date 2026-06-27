@@ -51,12 +51,21 @@ export class BloomFilter {
    * @param element 字符串元素
    */
   add(element: string): void {
-    const h1 = this.fnv1aString(element, BloomFilter.FNV_SEED_0);
-    const h2 = this.fnv1aString(element, BloomFilter.FNV_SEED_1);
+    let h1 = BloomFilter.FNV_SEED_0;
+    let h2 = BloomFilter.FNV_SEED_1;
+    const len = element.length;
+    for (let i = 0; i < len; i++) {
+      const char = element.charCodeAt(i) & 0xff;
+      h1 ^= char;
+      h1 = Math.imul(h1, BloomFilter.FNV_PRIME);
+      h2 ^= char;
+      h2 = Math.imul(h2, BloomFilter.FNV_PRIME);
+    }
+    h1 = h1 >>> 0;
+    h2 = h2 >>> 0;
 
     for (let i = 0; i < this.hashes; i++) {
       // Double Hashing: (h1 + i * h2) % m
-      // Fix: Avoid Math.imul which can return negative numbers and cause out-of-bounds indices
       const pos = (h1 + i * h2) % this.size;
       // 位运算优化: index / 8 => index >> 3, index % 8 => index & 7
       this.bitArray[pos >> 3] |= (1 << (pos & 7));
@@ -68,8 +77,18 @@ export class BloomFilter {
    * @param element 待检测字符串
    */
   test(element: string): boolean {
-    const h1 = this.fnv1aString(element, BloomFilter.FNV_SEED_0);
-    const h2 = this.fnv1aString(element, BloomFilter.FNV_SEED_1);
+    let h1 = BloomFilter.FNV_SEED_0;
+    let h2 = BloomFilter.FNV_SEED_1;
+    const len = element.length;
+    for (let i = 0; i < len; i++) {
+      const char = element.charCodeAt(i) & 0xff;
+      h1 ^= char;
+      h1 = Math.imul(h1, BloomFilter.FNV_PRIME);
+      h2 ^= char;
+      h2 = Math.imul(h2, BloomFilter.FNV_PRIME);
+    }
+    h1 = h1 >>> 0;
+    h2 = h2 >>> 0;
 
     for (let i = 0; i < this.hashes; i++) {
       const pos = (h1 + i * h2) % this.size;
@@ -103,6 +122,19 @@ export class BloomFilter {
     // 使用 subarray 保持对原始内存的引用，无额外拷贝
     const bitData = buffer.subarray(8);
     return new BloomFilter(size, hashes, bitData);
+  }
+
+  /**
+   * 合并另一个布隆过滤器 (按位或运算)
+   */
+  merge(other: BloomFilter): void {
+    if (this.size !== other.size || this.hashes !== other.hashes) {
+      throw new Error("Cannot merge bloom filters with different sizes or hash counts.");
+    }
+    const len = this.bitArray.length;
+    for (let i = 0; i < len; i++) {
+      this.bitArray[i] |= other.bitArray[i];
+    }
   }
 
   /**

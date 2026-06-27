@@ -168,10 +168,8 @@ PRESET_EXTERNAL_FILTERS = """
 # per-trigger CPU usage vs. the old all-at-once approach.
 BLOOM_FALSE_POSITIVE_RATE=0.0001
 
-# Maximum total domains included in a profile's Bloom Filter (across all lists).
-# The Bloom is pre-sized to this value at the start of each sync cycle.
-# 500k domains @ p=0.0001: bitArray ≈ 1.2 MB (3 × 512KB D1 chunks)
-MAX_SYNC_DOMAINS=500000
+# 1M domains @ p=0.0001: bitArray ≈ 2.4 MB (5 × 512KB D1 chunks)
+MAX_SYNC_DOMAINS=1000000
 
 # Maximum domains processed from a single list per cron trigger.
 # Each trigger: ~150k × 13 hashes = ~1.95M hash ops — well within CPU budget.

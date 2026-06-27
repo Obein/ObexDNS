@@ -39,11 +39,29 @@ export const ListsTable: React.FC<ListsTableProps> = ({ lists, onSelect }) => {
     {
       key: "status",
       header: t("filtering.tableStatus"),
-      render: (list: FilterList): React.ReactNode => (
-        <Tag intent={list.enabled ? Intent.SUCCESS : Intent.DANGER} minimal>
-          {list.enabled ? t("filtering.enabled") : t("filtering.disabled")}
-        </Tag>
-      ),
+      render: (list: FilterList): React.ReactNode => {
+        const hasError = !!list.sync_error;
+        const hasSynced = !!list.last_synced_at;
+        
+        let statusText = t("filtering.statusNormal", "Active");
+        let intent: Intent = Intent.SUCCESS;
+        
+        if (hasError) {
+          if (hasSynced) {
+            statusText = t("filtering.statusOutdated", "Outdated");
+            intent = Intent.WARNING;
+          } else {
+            statusText = t("filtering.statusMissing", "Missing");
+            intent = Intent.DANGER;
+          }
+        }
+        
+        return (
+          <Tag intent={intent} minimal>
+            {statusText}
+          </Tag>
+        );
+      },
     },
   ];
 
