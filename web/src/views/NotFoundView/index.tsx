@@ -12,7 +12,7 @@ export const NotFoundView = () => {
         title={t("common.notFound")}
         description={t("common.notFoundDesc")}
         action={
-          <Button intent={Intent.PRIMARY} onClick={() => navigate("/dash")}>
+          <Button intent={Intent.PRIMARY} onClick={() => navigate("/")}>
             {t("common.backToHome")}
           </Button>
         }
