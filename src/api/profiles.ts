@@ -30,7 +30,7 @@ export async function handleProfilesRequest(request: Request, env: Env, user: Us
     
     if (!isMobileConfig) {
       if (!user) return new Response("Unauthorized", { status: 401 });
-      if (!RBAC.canAccessProfile(user, profile)) return new Response("Forbidden", { status: 403 });
+      if (!RBAC.canAccessProfile(user, profile)) return new Response("Profile Not Found", { status: 404 });
     }
 
     const subResource = pathParts[3];
