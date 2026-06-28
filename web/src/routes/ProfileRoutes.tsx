@@ -40,6 +40,7 @@ interface ProfileRoutesProps {
   setPrefilledRule: any;
   handleQuickAction: any;
   toasterRef: any;
+  currentUser: any;
 }
 
 export const ProfileRoutes = ({
@@ -48,6 +49,7 @@ export const ProfileRoutes = ({
   setPrefilledRule,
   handleQuickAction,
   toasterRef,
+  currentUser,
 }: ProfileRoutesProps) => {
   const { profileId } = useParams();
   const id = profileId || selectedProfile?.id || "";
@@ -87,7 +89,7 @@ export const ProfileRoutes = ({
         />
         <Route
           path="settings"
-          element={<SettingsView profileId={id} toasterRef={toasterRef} />}
+          element={<SettingsView profileId={id} toasterRef={toasterRef} currentUser={currentUser} />}
         />
         <Route path="stats" element={<AnalyticsView profileId={id} />} />
         <Route

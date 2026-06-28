@@ -12,6 +12,7 @@ export interface UserInfo {
   password_version?: number;
   pin_enabled?: boolean;
   session_lock_timeout?: number;
+  max_log_retention_days?: number;
 }
 
 export interface ActivityEntry {

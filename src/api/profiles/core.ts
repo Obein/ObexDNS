@@ -43,7 +43,7 @@ export async function handleProfilesCoreCollectionRequest(
     const defaultSettings: ProfileSettings = {
       upstream: ["https://security.cloudflare-dns.com/dns-query"],
       ecs: { enabled: true, use_client_ip: true },
-      log_retention_days: 30,
+      log_retention_days: user?.role !== 'admin' ? Number(env.NORMAL_USER_DEFAULT_LOG_RETENTION_DAYS) : Number(env.DEFAULT_LOG_RETENTION_DAYS) || 30,
       default_policy: 'ALLOW'
     };
     await profileModel.create({ id: newId, owner_id: user.id, name: body.name || "Unnamed Profile", settings: defaultSettings });
@@ -107,6 +107,11 @@ export async function handleProfilesCoreRequest(
   if (pathParts[3] === 'settings' && request.method === 'PATCH') {
     const newSettings = await request.json() as ProfileSettings;
     
+    // Enforce log retention limit for non-admin users
+    if (user?.role !== 'admin' && newSettings.log_retention_days != null) {
+      newSettings.log_retention_days = Math.min(newSettings.log_retention_days, Number(env.NORMAL_USER_MAX_LOG_RETENTION_DAYS) || 7);
+    }
+    
     if (newSettings.upstream && Array.isArray(newSettings.upstream)) {
       for (const url of newSettings.upstream) {
         // 允许三种格式：https://...、http://...、tcp://...、裸 IP（8.8.8.8）或 IP:port（8.8.8.8:5353）
@@ -129,7 +134,7 @@ export async function handleProfilesCoreRequest(
     }
 
     await profileModel.updateSettings(profileId, newSettings);
-    const days = newSettings.log_retention_days || 30;
+    const days = newSettings.log_retention_days;
     const threshold = Math.floor(Date.now() / 1000 - (days * 24 * 3600));
     ctx.waitUntil(logModel.cleanup(profileId, threshold));
     await pipeline.clearCache(profileId);

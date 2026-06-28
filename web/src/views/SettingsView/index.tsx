@@ -17,7 +17,7 @@ import {
   getProfileRules
 } from "../../services";
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ profileId, toasterRef }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ profileId, toasterRef, currentUser }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [settings, setSettings] = useState<ProfileSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -213,7 +213,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ profileId, toasterRe
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <UpstreamCard settings={settings} setSettings={handleSettingsChange} />
         <DefaultPolicyCard settings={settings} setSettings={handleSettingsChange} />
-        <LogRetentionCard settings={settings} setSettings={handleSettingsChange} />
+        <LogRetentionCard settings={settings} setSettings={handleSettingsChange} isAdmin={currentUser?.role === "admin"} maxRetentionDays={currentUser?.max_log_retention_days ?? 7} />
         <AdvancedEcsCard settings={settings} setSettings={handleSettingsChange} />
       </div>
 

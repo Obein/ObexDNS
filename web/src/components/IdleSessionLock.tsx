@@ -11,12 +11,14 @@ import { DigitInput, type DigitInputRef } from "./DigitInput";
 interface IdleSessionLockProps {
   currentUser: UserInfo | null;
   handleLogout: () => Promise<void>;
+  onUnlock?: () => void;
   children: React.ReactNode;
 }
 
 export const IdleSessionLock: React.FC<IdleSessionLockProps> = ({
   currentUser,
   handleLogout,
+  onUnlock,
   children
 }) => {
   const { t } = useTranslation();
@@ -132,6 +134,9 @@ export const IdleSessionLock: React.FC<IdleSessionLockProps> = ({
       setAttemptsRemaining(null);
       // Reset activity clock
       lastActivityRef.current = Date.now();
+      if (onUnlock) {
+        onUnlock();
+      }
     } catch (err) {
       setPin(""); // Clear PIN on error
       if (err instanceof ApiError) {

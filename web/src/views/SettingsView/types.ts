@@ -1,5 +1,6 @@
 import { OverlayToaster } from "@blueprintjs/core";
 import React from "react";
+import type { UserInfo } from "../../types/auth";
 
 export interface ProfileSettings {
   upstream: string[]; // DoH URLs or Classic DNS
@@ -29,6 +30,7 @@ export interface Profile {
 export interface SettingsViewProps {
   profileId: string;
   toasterRef?: React.RefObject<OverlayToaster | null>;
+  currentUser: UserInfo | null;
 }
 
 export interface ResolutionResult {

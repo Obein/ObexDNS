@@ -33,6 +33,7 @@ export async function handleMeRequest(
         password_version: dbUser?.password_version ?? 1,
         pin_enabled: !!(dbUser?.pin_hash),
         session_lock_timeout: dbUser?.session_lock_timeout ?? 15,
+        max_log_retention_days: user.role === 'admin' ? Number(env.ADMIN_USER_MAX_LOG_RETENTION_DAYS) || 30 : Number(env.NORMAL_USER_MAX_LOG_RETENTION_DAYS) || 7,
       }), { headers: { 'Content-Type': 'application/json' } });
     }
 

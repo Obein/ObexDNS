@@ -1,6 +1,7 @@
 import { Env, User, ExecutionContext } from "../../types";
 import { ListModel } from "../../models/list";
-import { syncProfileLists } from "../../utils/sync";
+import { ProfileModel } from "../../models/profile";
+import { syncNextListForProfile } from "../../utils/sync";
 import { isSafeUrl } from "../../utils/validator";
 import { pipeline } from "../../pipeline";
 
@@ -16,6 +17,7 @@ export async function handleProfileListsRequest(
   ctx: ExecutionContext
 ): Promise<Response> {
   const listModel = new ListModel(env.DB);
+  const profileModel = new ProfileModel(env.DB);
 
   if (request.method === 'GET') {
     const results = await listModel.getLists(profileId);
@@ -24,7 +26,12 @@ export async function handleProfileListsRequest(
 
   if (request.method === 'POST') {
     if (pathParts[4] === 'sync') {
-      ctx.waitUntil(syncProfileLists(profileId, env, ctx));
+      // 重置同步状态，使得 Cron 或者是接下来的异步任务可以逐个处理列表
+      await listModel.resetListSyncStatus(profileId);
+      await profileModel.updateListUpdatedAt(profileId, 0);
+      
+      // 触发首个列表的同步
+      ctx.waitUntil(syncNextListForProfile(profileId, env, ctx));
       return new Response(JSON.stringify({ message: "Sync started" }), { status: 202 });
     }
 
@@ -37,7 +44,8 @@ export async function handleProfileListsRequest(
     }
     
     await listModel.addList(profileId, listUrl);
-    ctx.waitUntil(syncProfileLists(profileId, env, ctx));
+    // 只触发新添加列表的同步 (syncNextListForProfile 会挑选未同步的最旧列表，即此新列表)
+    ctx.waitUntil(syncNextListForProfile(profileId, env, ctx));
     ctx.waitUntil(pipeline.clearCache(profileId));
     return new Response(null, { status: 201 });
   }
@@ -45,7 +53,8 @@ export async function handleProfileListsRequest(
   if (request.method === 'DELETE') {
     const { id } = await request.json() as { id: number };
     await listModel.deleteList(id, profileId);
-    ctx.waitUntil(syncProfileLists(profileId, env, ctx));
+    // 触发重构合并 (没有 pending 列表，syncNextListForProfile 会直接运行 combineAndPromote)
+    ctx.waitUntil(syncNextListForProfile(profileId, env, ctx));
     ctx.waitUntil(pipeline.clearCache(profileId));
     return new Response(null, { status: 204 });
   }

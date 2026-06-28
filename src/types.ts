@@ -24,6 +24,7 @@ export interface Env {
   MAX_LIST_DOMAINS?: string | number;
   MAX_LOG_RETENTION_DAYS?: string | number;
   MAX_LOGS_PER_PROFILE?: string | number;
+  NORMAL_USER_MAX_LOG_RETENTION_DAYS?: string | number;
   [key: string]: any;
 }
 
