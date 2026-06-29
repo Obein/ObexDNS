@@ -27,12 +27,13 @@ export async function handleScheduled(
     const now = Math.floor(Date.now() / 1000);
 
     try {
-      const inactivityDays = Number(env.INACTIVITY_THRESHOLD_DAYS) || 180;
-      const inactivityThreshold = now - (inactivityDays * 24 * 3600);
       const userModel = new UserModel(env.DB);
-      await userModel.cleanupInactiveUsers(inactivityThreshold);
+      const { clearedProfiles, deletedUsers } = await userModel.applyInactivityPolicy(now);
+      if (clearedProfiles > 0 || deletedUsers > 0) {
+        console.log(`[Cron] Inactivity cleanup: cleared ${clearedProfiles} profile(s), deleted ${deletedUsers} user(s).`);
+      }
     } catch (e) {
-      console.error("[Cron] Inactive users cleanup failed:", e);
+      console.error("[Cron] Inactivity policy execution failed:", e);
     }
 
     try {

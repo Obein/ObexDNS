@@ -147,8 +147,35 @@ export class UserModel {
     return result.success;
   }
 
-  async cleanupInactiveUsers(threshold: number): Promise<boolean> {
-    const result = await this.db.prepare("DELETE FROM users WHERE role = 'user' AND last_active_at < ?").bind(threshold).run();
-    return result.success;
+  async applyInactivityPolicy(now: number): Promise<{ clearedProfiles: number; deletedUsers: number }> {
+    const thirtyDaysAgo = now - (30 * 24 * 3600);
+    const ninetyDaysAgo = now - (90 * 24 * 3600);
+
+    // 1. 超过 30 天无解析记录的账户，其所有关联查询日志及 DNS 配置将被自动清理
+    const deleteProfilesStmt = this.db.prepare(`
+      DELETE FROM profiles 
+      WHERE owner_id IN (
+        SELECT id FROM users 
+        WHERE role = 'user' 
+          AND (last_active_at < ? OR (last_active_at IS NULL AND created_at < ?))
+      )
+    `).bind(thirtyDaysAgo, thirtyDaysAgo);
+
+    // 2. 账户本身在 90 天无登录后将予移除
+    const deleteUsersStmt = this.db.prepare(`
+      DELETE FROM users
+      WHERE role = 'user'
+        AND (
+          SELECT COALESCE(MAX(timestamp), created_at) 
+          FROM user_activity_log 
+          WHERE user_id = users.id
+        ) < ?
+    `).bind(ninetyDaysAgo);
+
+    const results = await this.db.batch([deleteProfilesStmt, deleteUsersStmt]);
+    return {
+      clearedProfiles: results[0].meta.changes || 0,
+      deletedUsers: results[1].meta.changes || 0
+    };
   }
 }
