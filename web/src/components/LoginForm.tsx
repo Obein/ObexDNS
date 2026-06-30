@@ -140,7 +140,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           onSubmit={handleStep2Submit}
           keepLoggedIn={keepLoggedIn}
           setKeepLoggedIn={setKeepLoggedIn}
-          optionalSessionExpirationDays={authConfig?.optional_session_expiration_days ?? 30}
+          optionalSessionExpirationDays={authConfig?.optional_session_expiration_days ?? 7}
         />
       )}
 

@@ -9,7 +9,7 @@ export const PREAUTH_COOKIE_NAME = 'preauth_session';
 export function createRefreshTokenCookie(refreshToken: string, env: Env, keepLoggedIn?: boolean): string {
   let maxAge: number;
   if (keepLoggedIn) {
-    const expirationDays = Number(env.OPTIONAL_SESSION_EXPIRATION_DAYS) || 30;
+    const expirationDays = Number(env.OPTIONAL_SESSION_EXPIRATION_DAYS) || 7;
     maxAge = expirationDays * 24 * 60 * 60;
   } else {
     const expirationMinutes = Number(env.DEFAULT_SESSION_EXPIRATION_MINUTES) || 1440;
@@ -41,7 +41,7 @@ export function readRefreshTokenCookie(cookieHeader: string | null): string | nu
 export function createCsrfCookie(token: string, env?: Env, keepLoggedIn?: boolean): string {
   let maxAgeStr = "";
   if (keepLoggedIn && env) {
-    const expirationDays = Number(env.OPTIONAL_SESSION_EXPIRATION_DAYS) || 30;
+    const expirationDays = Number(env.OPTIONAL_SESSION_EXPIRATION_DAYS) || 7;
     const maxAge = expirationDays * 24 * 60 * 60;
     maxAgeStr = `; Max-Age=${maxAge}`;
   }
